@@ -3,6 +3,7 @@ mod admin;
 mod auth;
 mod error;
 mod model;
+mod notify;
 mod rollover;
 mod snapshot;
 
@@ -28,6 +29,7 @@ pub struct Config {
 pub struct AppState {
     pub pool: PgPool,
     pub config: Arc<Config>,
+    pub push: Arc<notify::Push>,
 }
 
 fn env_or(key: &str, default: &str) -> String {
@@ -82,7 +84,16 @@ async fn main() -> anyhow::Result<()> {
     rollover::catch_up(&pool, tz).await.map_err(|e| anyhow::anyhow!(e.message))?;
     rollover::spawn_scheduler(pool.clone(), tz);
 
-    let state = AppState { pool, config: Arc::new(config) };
+    // Push services want a contact for the sender: the site's https URL if set.
+    let contact = env::var("FAVOR_PUBLIC_URL")
+        .ok()
+        .map(|u| u.trim().trim_end_matches('/').to_string())
+        .filter(|u| u.starts_with("https://"))
+        .unwrap_or_else(|| "mailto:favor@example.com".into());
+    let push = Arc::new(notify::Push::load(&pool, contact).await?);
+    notify::spawn_sender(pool.clone(), push.clone());
+
+    let state = AppState { pool, config: Arc::new(config), push };
     let static_dir = env_or("FAVOR_STATIC_DIR", "static");
 
     let api = Router::new()
@@ -110,6 +121,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/holiday/:user/decline", post(actions::decline_holiday))
         .route("/proposals", post(actions::propose))
         .route("/proposals/:id/vote", post(actions::vote))
+        .route("/notifications/read", post(notify::mark_read))
+        .route("/push/key", get(notify::public_key))
+        .route("/push/subscribe", post(notify::subscribe))
+        .route("/push/unsubscribe", post(notify::unsubscribe))
         .route("/admin/login", post(admin::login))
         .route("/admin/logout", post(admin::logout))
         .route("/admin/users", get(admin::list).post(admin::create))

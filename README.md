@@ -32,6 +32,7 @@ Two containers:
    | `FAVOR_TZ` | `Europe/Madrid` | When "midnight" happens. |
    | `FAVOR_PORT` | `8080` | Host port. |
    | `FAVOR_COOKIE_SECURE` | `true` | Set when served over HTTPS. |
+   | `FAVOR_PUBLIC_URL` | `https://favor.example.net` | The HTTPS address people use. Sent to push services as the sender's contact. |
 
 4. Deploy, then open `http://<server>:8080`.
 
@@ -54,6 +55,31 @@ ignored, so changing it does nothing.
 Admin sessions last 12 hours. A wrong admin password takes a second to reject,
 to slow down guessing. If you expose the app to the internet, serve it over
 HTTPS and set `FAVOR_COOKIE_SECURE=true`.
+
+## Notifications
+
+Each roommate gets a notification when:
+
+- someone proposes a vote (everyone except the proposer),
+- a vote ends: approved, vetoed, or cancelled because the admin changed the
+  task or someone moved out (everyone except whoever decided it),
+- someone asks them to take a task, or spends favor to hand them one.
+
+They show up under the bell in the header. Opening it marks them read; they're
+deleted after 30 days.
+
+The bell also offers to **turn on notifications for this device**, which sends
+them as phone/desktop notifications through the browser (Web Push), even with
+Favor closed. That needs:
+
+- **HTTPS.** Browsers only allow it on secure pages, so serve Favor behind a
+  reverse proxy with a certificate and set `FAVOR_PUBLIC_URL`.
+- **On iPhone/iPad** (iOS 16.4+): Share → *Add to Home Screen*, then open Favor
+  from the Home Screen and turn notifications on there.
+
+The server creates its push key (VAPID) on first start and keeps it in the
+database, so there's nothing to configure. Logging out stops pushes to that
+device. A device belongs to whoever signed in on it last.
 
 ## Run locally
 

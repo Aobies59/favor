@@ -34,6 +34,7 @@ services:
       FAVOR_HOUSE_NAME: ${FAVOR_HOUSE_NAME:-Our flat}
       FAVOR_TZ: ${FAVOR_TZ:-Europe/Madrid}
       FAVOR_COOKIE_SECURE: ${FAVOR_COOKIE_SECURE:-false}
+      FAVOR_PUBLIC_URL: ${FAVOR_PUBLIC_URL:-https://favor.seruji.net}
     volumes:
       - ./backend/static:/app/static:ro
     ports:

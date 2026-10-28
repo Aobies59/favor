@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Favor</title>
+<meta name="theme-color" content="#f2f2f3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Favor">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-180.png">
 <script src="./support.js"></script>
 </head>
 <body>
@@ -49,6 +55,45 @@
         </sc-for>
       </nav>
       <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+        <div style="position:relative;display:flex">
+          <button class="btn btn-secondary" onClick="{{ toggleBell }}" title="Notifications" style="position:relative;padding:7px 9px;display:flex;align-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg><sc-if value="{{ hasUnread }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-7px;right:-7px;min-width:18px;height:18px;padding:0 5px;display:grid;place-items:center;background:var(--color-accent);color:var(--color-bg);font-size:11px">{{ unreadLabel }}</span></sc-if></button>
+          <sc-if value="{{ showBell }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ closeBell }}" style="position:fixed;inset:0;z-index:6"></div>
+            <div class="blueprint" style="position:absolute;top:calc(100% + 12px);right:0;z-index:7;width:min(380px,calc(100vw - 32px));cursor:default;overflow:hidden;box-sizing:border-box;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-lg)">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="padding:14px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--color-divider)">
+                <div style="display:flex;align-items:baseline;gap:10px">
+                  <div style="font-family:var(--font-heading);font-weight:600;font-size:20px">Notifications</div>
+                  <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">{{ bellCount }}</div>
+                </div>
+                <sc-if value="{{ pushOff }}" hint-placeholder-val="{{ true }}">
+                  <button class="btn btn-primary" onClick="{{ enablePush }}" style="font-size:12px;padding:5px 10px;white-space:nowrap">Turn on</button>
+                </sc-if>
+                <sc-if value="{{ pushOn }}" hint-placeholder-val="{{ false }}">
+                  <button class="btn btn-ghost" onClick="{{ disablePush }}" style="font-size:12px;padding:5px 10px;white-space:nowrap">Turn off</button>
+                </sc-if>
+              </div>
+              <sc-if value="{{ pushHint }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:12px 18px;font-size:13px;line-height:1.4;color:var(--color-text-muted, var(--color-text));background:var(--color-accent-100);border-bottom:1px solid var(--color-divider)">{{ pushHintText }}</div>
+              </sc-if>
+              <div style="max-height:288px;overflow-y:auto;overflow-x:hidden">
+              <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="3">
+                <button onClick="{{ n.open }}" style-hover="box-shadow:inset 0 0 0 999px color-mix(in oklch,var(--color-text) 6%,transparent)" style="cursor:pointer;width:100%;box-sizing:border-box;text-align:left;background:{{ n.bg }};border:0;border-bottom:1px solid var(--color-divider);padding:14px 18px;display:flex;gap:12px;font:inherit;color:inherit">
+                  <span style="flex:none;width:8px;height:8px;margin-top:6px;background:{{ n.dot }}"></span>
+                  <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                    <span style="font-weight:500;font-size:14px">{{ n.title }}</span>
+                    <span style="font-size:13px;line-height:1.4;opacity:.75">{{ n.body }}</span>
+                    <span style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-accent-700)">{{ n.when }}</span>
+                  </span>
+                </button>
+              </sc-for>
+              </div>
+              <sc-if value="{{ noNotifs }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:28px 18px;text-align:center;font-size:14px;opacity:.7">Nothing yet. Enjoy the quiet.</div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
         <span style="width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600">{{ meInitial }}</span>
         <span style="font-weight:500">{{ meName }}</span>
         <button class="btn btn-secondary" onClick="{{ openLogout }}" style="font-size:13px;display:flex;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg>Log out</button>
@@ -215,7 +260,7 @@
                   <div style="display:grid;grid-template-columns:90px minmax(0,1fr);gap:8px;font-size:13px"><span style="color:var(--color-neutral-600)">{{ l.label }}</span><span><span style="text-decoration:line-through;color:var(--color-neutral-500)">{{ l.from }}</span> <span style="font-weight:500">{{ l.to }}</span></span></div>
                 </sc-for>
               </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--color-divider)">
+              <div style="margin-top:auto;display:flex;gap:6px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--color-divider)">
                 <sc-for list="{{ p.votes }}" as="v" hint-placeholder-count="3">
                   <span style="display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 8px 3px 3px;border:1px solid var(--color-divider);background:{{ v.bg }}"><span style="width:20px;height:20px;display:grid;place-items:center;background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600;font-size:12px">{{ v.initial }}</span>{{ v.text }}</span>
                 </sc-for>
@@ -431,13 +476,23 @@ const shiftDay=(d,n)=>{const x=parseDay(d);x.setDate(x.getDate()+n);return isoDa
 const LAST_USER='favor:lastUser';
 const remembered=()=>{try{return +localStorage.getItem(LAST_USER)||null;}catch(e){return null;}};
 const remember=id=>{try{localStorage.setItem(LAST_USER,String(id));}catch(e){}};
+const SCREENS=['today','editor','favors','activity'];
+const isIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const keyBytes=b64=>{const s=atob((b64+'='.repeat((4-b64.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(s,c=>c.charCodeAt(0));};
+const sameKey=(a,b)=>{if(!a||!b)return false;a=new Uint8Array(a);if(a.length!==b.length)return false;return a.every((x,i)=>x===b[i]);};
+const ago=iso=>{const m=Math.round((Date.now()-new Date(iso))/60000);if(m<1)return 'Just now';if(m<60)return `${m} min ago`;const h=Math.round(m/60);if(h<24)return `${h} h ago`;const d=Math.round(h/24);return d===1?'Yesterday':`${d} days ago`;};
 
 class Component extends DCLogic {
   state = {screen:'loading', loginUsers:[], house:'', pick:null, password:'',
     me:null, date:null, tasks:[], today:[], missed:[], bal:{}, pending:[], log:[], holiday:{},
-    modal:null, target:null, reason:'', holidayNote:'', form:null, toast:''};
+    modal:null, target:null, reason:'', holidayNote:'', form:null, toast:'',
+    notifs:[], unread:0, bell:false, fresh:[], push:'unknown'};
 
   componentDidMount(){
+    // A notification tap opens /?go=<tab>.
+    const go=new URLSearchParams(location.search).get('go');
+    if(SCREENS.includes(go)){this._go=go;history.replaceState(null,'',location.pathname);}
+    this.setupPush();
     this.loadUsers();
     this.refresh();
     this._poll=setInterval(()=>{if(this.state.screen!=='login'&&!document.hidden)this.refresh();},15000);
@@ -455,7 +510,7 @@ class Component extends DCLogic {
   }
   apply(j){
     setUsers(j.users);
-    this.setState({me:j.me,date:j.today,house:j.house,tasks:j.tasks,today:j.items,missed:j.missed,bal:j.bal,pending:j.pending,log:j.log,holiday:j.holiday});
+    this.setState({me:j.me,date:j.today,house:j.house,tasks:j.tasks,today:j.items,missed:j.missed,bal:j.bal,pending:j.pending,log:j.log,holiday:j.holiday,notifs:j.notifications||[],unread:j.unread||0});
   }
   async refresh(){
     try{
@@ -463,7 +518,7 @@ class Component extends DCLogic {
       if(r.status===401){this.setState({screen:'login',me:null});return;}
       if(!r.ok)return;
       this.apply(j);
-      if(this.state.screen==='loading'||this.state.screen==='login')this.setState({screen:'today'});
+      if(this.state.screen==='loading'||this.state.screen==='login'){this.setState({screen:this._go||'today'});this._go=null;this.syncPush();}
     }catch(e){if(this.state.screen==='loading')this.setState({screen:'login'});}
   }
   async loadUsers(){
@@ -496,13 +551,71 @@ class Component extends DCLogic {
       if(!r.ok){this.flash(j.error||'Couldn\'t sign in.');return;}
       remember(s.pick);this.setState({password:''});
       await this.refresh();
-      this.setState({screen:'today'});
     }catch(e){this.flash('Can\'t reach the server.');}
   }
   async logout(){
+    try{const sub=await this.subscription();if(sub)await this.call('/push/unsubscribe',{endpoint:sub.endpoint});}catch(e){}
     try{await this.call('/logout',{});}catch(e){}
-    this.setState(s=>({screen:'login',me:null,pick:s.me,password:'',modal:null}));
+    this.setState(s=>({screen:'login',me:null,pick:s.me,password:'',modal:null,bell:false,notifs:[],unread:0}));
     this.loadUsers();
+  }
+
+  // ── Notifications ──
+  // push: 'on' | 'off' | 'blocked' | 'insecure' | 'ios' (needs Home Screen) | 'unsupported'
+  async setupPush(){
+    if(!window.isSecureContext){this.setState({push:'insecure'});return;}
+    if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){this.setState({push:isIOS()?'ios':'unsupported'});return;}
+    try{
+      this._reg=await navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.addEventListener('message',e=>{const d=e.data||{};
+        if(d.type==='push'&&this.state.me!=null)this.refresh();
+        if(d.type==='open'&&SCREENS.includes(d.go)&&this.state.me!=null)this.setState({screen:d.go,bell:false});});
+    }catch(e){this.setState({push:'unsupported'});return;}
+    await this.pushState();
+  }
+  async subscription(){return this._reg?this._reg.pushManager.getSubscription():null;}
+  async pushState(){
+    if(!this._reg)return;
+    if(Notification.permission==='denied'){this.setState({push:'blocked'});return;}
+    const sub=await this.subscription();
+    this.setState({push:sub&&Notification.permission==='granted'?'on':'off'});
+  }
+  // After signing in, hand this device's subscription to whoever is signed in
+  // now (and renew it if the server's key changed).
+  async syncPush(){
+    try{
+      const sub=await this.subscription();
+      if(!sub||Notification.permission!=='granted')return this.pushState();
+      const {j}=await this.call('/push/key');
+      if(!sameKey(sub.options.applicationServerKey,keyBytes(j.key))){await sub.unsubscribe();return this.enablePush(true);}
+      await this.call('/push/subscribe',sub.toJSON());
+      this.setState({push:'on'});
+    }catch(e){}
+  }
+  async enablePush(quiet){
+    try{
+      const perm=await Notification.requestPermission();
+      if(perm!=='granted'){await this.pushState();if(!quiet)this.flash(perm==='denied'?'Blocked. You can allow notifications in the browser settings.':'Maybe later, then.');return;}
+      const {j}=await this.call('/push/key');
+      let sub=await this.subscription();
+      if(sub&&!sameKey(sub.options.applicationServerKey,keyBytes(j.key))){await sub.unsubscribe();sub=null;}
+      if(!sub)sub=await this._reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:keyBytes(j.key)});
+      const {r,j:res}=await this.call('/push/subscribe',sub.toJSON());
+      if(!r.ok)throw new Error(res.error);
+      this.setState({push:'on'});
+      if(!quiet)this.flash('Notifications on. We\'ll nag you here too.');
+    }catch(e){if(!quiet)this.flash('Couldn\'t turn on notifications on this device.');await this.pushState();}
+  }
+  async disablePush(){
+    try{const sub=await this.subscription();if(sub){await this.call('/push/unsubscribe',{endpoint:sub.endpoint});await sub.unsubscribe();}}catch(e){}
+    this.setState({push:'off'});this.flash('Notifications off for this device.');
+  }
+  toggleBell(){
+    if(this.state.bell){this.setState({bell:false});return;}
+    // Keep the unread dots for this look, then mark everything read.
+    this.setState(s=>({bell:true,fresh:s.notifs.filter(n=>!n.read).map(n=>n.id)}));
+    this.pushState();
+    if(this.state.unread>0)this.call('/notifications/read',{}).then(({r,j})=>{if(r.ok)this.apply(j);}).catch(()=>{});
   }
 
   done(it){const t=this.task(it.taskId);this.act(`/items/${it.id}/done`,{},`${t.name}: done. Look at you.`);}
@@ -611,7 +724,16 @@ class Component extends DCLogic {
     const hd=(s.holiday||{})[me];const hst=hd?hd.status:'none';
     return {
       ...loginVals,
-      openLogout:()=>this.setState({modal:'logout'}),showLogout:s.modal==='logout',logout:()=>this.logout(),
+      openLogout:()=>this.setState({modal:'logout',bell:false}),showLogout:s.modal==='logout',logout:()=>this.logout(),
+      hasUnread:s.unread>0,unreadLabel:s.unread>9?'9+':String(s.unread),showBell:s.bell,toggleBell:()=>this.toggleBell(),closeBell:()=>this.setState({bell:false}),
+      bellCount:s.fresh.length?`${s.fresh.length} new`:'',
+      notifs:s.notifs.map(n=>{const isNew=s.fresh.includes(n.id);return {title:n.title,body:n.body,when:ago(n.at),
+        dot:isNew?'var(--color-accent)':'transparent',bg:isNew?'color-mix(in oklch,var(--color-accent-100) 60%,transparent)':'transparent',
+        open:()=>this.setState({bell:false,screen:SCREENS.includes(n.link)?n.link:'today'})};}),
+      noNotifs:!s.notifs.length,
+      pushOn:s.push==='on',pushOff:s.push==='off',enablePush:()=>this.enablePush(),disablePush:()=>this.disablePush(),
+      pushHint:['blocked','insecure','ios'].includes(s.push),
+      pushHintText:s.push==='blocked'?'Notifications are blocked for Favor in this browser. Allow them in the site settings to get them here.':s.push==='ios'?'On iPhone: tap Share, then Add to Home Screen, and open Favor from there to turn on notifications.':'Open Favor at its https:// address to get notifications on this device.',
       tabs,meName:NAME[me]||'',meInitial:initial(NAME[me]),
       isToday:s.screen==='today',isEditor:s.screen==='editor',isFavors:s.screen==='favors',isActivity:s.screen==='activity',
       dateLabel,todaySub,myTasks,noTasks:!myTasks.length&&hst!=='away',doneCount,totalCount:mine.length,

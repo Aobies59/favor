@@ -270,6 +270,7 @@ pub async fn remove(State(st): State<AppState>, _: Admin, Path(id): Path<i32>) -
     .execute(&mut *tx)
     .await?;
     sqlx::query("DELETE FROM missed WHERE assignee_id = $1").bind(id).execute(&mut *tx).await?;
+    let dropped = actions::proposal_titles(&mut tx, "p.proposer_id = $1 OR (p.data_json->>'owner')::int = $1", id).await?;
     sqlx::query("DELETE FROM proposals WHERE proposer_id = $1 OR (data_json->>'owner')::int = $1")
         .bind(id)
         .execute(&mut *tx)
@@ -280,11 +281,12 @@ pub async fn remove(State(st): State<AppState>, _: Admin, Path(id): Path<i32>) -
     let day = model::today(&mut tx).await?;
     let text = format!("{name} moved out. Their tasks went to {}.", house.name(heir));
     model::log(&mut tx, day, "vote", text, None, &house.all_ids(), None).await?;
+    actions::notify_cancelled(&mut tx, &house, &dropped, &format!("{name} moved out.")).await?;
 
     // With one voter fewer, some pending proposals may now be unanimous.
     let pending: Vec<(i32,)> = sqlx::query_as("SELECT id FROM proposals ORDER BY id").fetch_all(&mut *tx).await?;
     for (pid,) in pending {
-        actions::apply_if_unanimous(&mut tx, pid, &house, day).await?;
+        actions::apply_if_unanimous(&mut tx, pid, &house, day, None).await?;
     }
 
     let out = users_json(&mut tx).await?;
@@ -356,7 +358,9 @@ pub async fn update_task(
     if d == model::TaskData::from_task(&old) {
         return Err(AppError::bad("Nothing changed."));
     }
+    let dropped = actions::proposal_titles(&mut tx, "p.task_id = $1", id).await?;
     sqlx::query("DELETE FROM proposals WHERE task_id = $1").bind(id).execute(&mut *tx).await?;
+    actions::notify_cancelled(&mut tx, &house, &dropped, "The admin changed the task directly.").await?;
     actions::update_task(&mut tx, id, &d).await?;
     let text = if d.name == old.name {
         format!("Admin changed {}", old.name)
@@ -375,7 +379,9 @@ pub async fn delete_task(State(st): State<AppState>, _: Admin, Path(id): Path<i3
     let house = model::household(&mut tx).await?;
     let day = model::today(&mut tx).await?;
     let t = model::task(&mut tx, id).await?;
+    let dropped = actions::proposal_titles(&mut tx, "p.task_id = $1", id).await?;
     actions::delete_task(&mut tx, id).await?;
+    actions::notify_cancelled(&mut tx, &house, &dropped, "The admin removed the task.").await?;
     let text = format!("Admin removed {}", t.name);
     model::log(&mut tx, day, "vote", text, None, &house.all_ids(), None).await?;
     let out = tasks_json(&mut tx).await?;

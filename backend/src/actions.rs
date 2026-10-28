@@ -13,6 +13,7 @@ use crate::{
     auth::Me,
     error::{AppError, AppResult},
     model::{self, Household, Instance, Task, TaskData, UNRESOLVED},
+    notify::notify,
     snapshot, AppState,
 };
 
@@ -176,6 +177,10 @@ pub async fn ask(State(st): State<AppState>, Me(me): Me, Path(id): Path<i32>, Js
     set_instance(&mut tx, id, "handoff", me, Some(body.to), None).await?;
     let text = format!("{} asked {} to take {}", house.name(me), house.name(body.to), t.name);
     model::log(&mut tx, day, "ask", text, None, &[me, body.to], Some(me)).await?;
+    let from = house.name(me);
+    let title = format!("{from} asks you to take {}", t.name);
+    let body_text = format!("Take it and you hold +{} on {from}. Or say nope.", t.value());
+    notify(&mut tx, &[body.to], "handoff", title, body_text, "today").await?;
     finish(tx, &st, me).await
 }
 
@@ -194,6 +199,9 @@ pub async fn spend(State(st): State<AppState>, Me(me): Me, Path(id): Path<i32>, 
     let (from, to) = (house.name(me), house.name(body.to));
     let text = format!("{from} spent favor to give {} to {to}", t.name);
     model::log(&mut tx, day, "spend", text, Some(format!("{from} −{v} on {to}")), &[me, body.to], Some(me)).await?;
+    let title = format!("{from} handed you {}", t.name);
+    let body_text = format!("They spent {v} favor on you, so it's yours today.");
+    notify(&mut tx, &[body.to], "handoff", title, body_text, "today").await?;
     finish(tx, &st, me).await
 }
 
@@ -498,7 +506,16 @@ pub async fn propose(State(st): State<AppState>, Me(me): Me, Json(body): Json<Pr
     };
     let text = format!("{} proposed {what}: {title}", house.name(me));
     model::log(&mut tx, day, "vote", text, None, &house.all_ids(), Some(me)).await?;
-    apply_if_unanimous(&mut tx, pid, &house, day).await?;
+    if !apply_if_unanimous(&mut tx, pid, &house, day, Some(me)).await? {
+        let subject = match body.kind.as_str() {
+            "add" => title.clone(),
+            "edit" => format!("changes to {title}"),
+            _ => format!("remove {title}"),
+        };
+        let body_text = format!("{} proposed it. Approve or veto it in the Editor.", house.name(me));
+        let others: Vec<i32> = house.others(me).collect();
+        notify(&mut tx, &others, "vote", format!("New vote: {subject}"), body_text, "editor").await?;
+    }
     finish(tx, &st, me).await
 }
 
@@ -547,24 +564,34 @@ pub async fn vote(State(st): State<AppState>, Me(me): Me, Path(id): Path<i32>, J
     let house = model::household(&mut tx).await?;
     let day = model::today(&mut tx).await?;
     if body.yes {
-        apply_if_unanimous(&mut tx, id, &house, day).await?;
+        apply_if_unanimous(&mut tx, id, &house, day, Some(me)).await?;
     } else {
         let title = proposal_title(&mut tx, &p).await?;
         sqlx::query("DELETE FROM proposals WHERE id = $1").bind(id).execute(&mut *tx).await?;
         let text = format!("{} vetoed: {title}", house.name(me));
         model::log(&mut tx, day, "vote", text, None, &house.all_ids(), Some(me)).await?;
+        let others: Vec<i32> = house.others(me).collect();
+        let body_text = format!("{} vetoed it, so nothing changes.", house.name(me));
+        notify(&mut tx, &others, "vote", format!("Vetoed: {title}"), body_text, "editor").await?;
     }
     finish(tx, &st, me).await
 }
 
-/// Applies a proposal once every roommate has voted yes.
-pub async fn apply_if_unanimous(c: &mut PgConnection, id: i32, house: &Household, day: chrono::NaiveDate) -> AppResult<()> {
+/// Applies a proposal once every roommate has voted yes, and tells everyone
+/// except `actor` (the deciding voter). Returns whether it was applied.
+pub async fn apply_if_unanimous(
+    c: &mut PgConnection,
+    id: i32,
+    house: &Household,
+    day: chrono::NaiveDate,
+    actor: Option<i32>,
+) -> AppResult<bool> {
     let (yes,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM votes WHERE proposal_id = $1 AND yes")
         .bind(id)
         .fetch_one(&mut *c)
         .await?;
     if (yes as usize) < house.users.len() {
-        return Ok(());
+        return Ok(false);
     }
     let p = proposal(c, id).await?;
     let title = proposal_title(c, &p).await?;
@@ -585,7 +612,36 @@ pub async fn apply_if_unanimous(c: &mut PgConnection, id: i32, house: &Household
     };
     let text = format!("Everyone approved: {what} {title}");
     model::log(c, day, "vote", text, None, &house.all_ids(), None).await?;
+
+    let (subject, body_text) = match p.kind.as_str() {
+        "add" => (title.clone(), "Everyone said yes. The new task starts today."),
+        "edit" => (format!("changes to {title}"), "Everyone said yes. The changes are in."),
+        _ => (format!("removing {title}"), "Everyone said yes. It's gone."),
+    };
+    let others: Vec<i32> = house.users.iter().map(|u| u.id).filter(|&u| Some(u) != actor).collect();
+    notify(c, &others, "vote", format!("Approved: {subject}"), body_text.into(), "editor").await?;
+    Ok(true)
+}
+
+/// Tells everyone that votes ended without a decision (e.g. the admin
+/// changed the task directly). `titles` are the proposals' titles.
+pub async fn notify_cancelled(c: &mut PgConnection, house: &Household, titles: &[String], reason: &str) -> AppResult<()> {
+    for title in titles {
+        notify(c, &house.all_ids(), "vote", format!("Vote cancelled: {title}"), reason.into(), "editor").await?;
+    }
     Ok(())
+}
+
+/// Titles of the proposals matching `filter` (a WHERE clause on `p`, with $1).
+pub async fn proposal_titles(c: &mut PgConnection, filter: &str, arg: i32) -> AppResult<Vec<String>> {
+    let rows: Vec<(String,)> = sqlx::query_as(&format!(
+        "SELECT COALESCE(p.data_json->>'name', t.name, 'a task') FROM proposals p
+         LEFT JOIN tasks t ON t.id = p.task_id WHERE {filter} ORDER BY p.id"
+    ))
+    .bind(arg)
+    .fetch_all(c)
+    .await?;
+    Ok(rows.into_iter().map(|(t,)| t).collect())
 }
 
 

@@ -39,6 +39,7 @@ services:
       FAVOR_TZ: ${FAVOR_TZ:-Europe/Madrid}
       # Set to true when serving over HTTPS (behind a reverse proxy).
       FAVOR_COOKIE_SECURE: ${FAVOR_COOKIE_SECURE:-false}
+      FAVOR_PUBLIC_URL: ${FAVOR_PUBLIC_URL:-}
     ports:
       - "${FAVOR_PORT:-8080}:8080"
 

@@ -10,6 +10,7 @@ use sqlx::{FromRow, PgConnection};
 use crate::{error::AppResult, model, AppState};
 
 const LOG_LIMIT: i64 = 500;
+const NOTIFICATION_LIMIT: i64 = 30;
 
 #[derive(FromRow)]
 struct MissedRow {
@@ -40,6 +41,17 @@ struct ActivityRow {
     delta: Option<String>,
     user_ids: Vec<i32>,
     actor_id: Option<i32>,
+}
+
+#[derive(FromRow)]
+struct NotificationRow {
+    id: i64,
+    kind: String,
+    title: String,
+    body: String,
+    link: String,
+    created_at: chrono::DateTime<chrono::Utc>,
+    read_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[derive(FromRow)]
@@ -152,6 +164,28 @@ pub async fn build(c: &mut PgConnection, state: &AppState, me: i32) -> AppResult
             .map(|h| (h.user_id.to_string(), json!({ "status": h.status, "note": h.note, "since": h.since })))
             .collect();
 
+    let notifications: Vec<Value> = sqlx::query_as::<_, NotificationRow>(
+        "SELECT id, kind, title, body, link, created_at, read_at FROM notifications
+         WHERE user_id = $1 ORDER BY id DESC LIMIT $2",
+    )
+    .bind(me)
+    .bind(NOTIFICATION_LIMIT)
+    .fetch_all(&mut *c)
+    .await?
+    .into_iter()
+    .map(|n| {
+        json!({
+            "id": n.id, "kind": n.kind, "title": n.title, "body": n.body, "link": n.link,
+            "at": n.created_at, "read": n.read_at.is_some(),
+        })
+    })
+    .collect();
+    let (unread,): (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND read_at IS NULL")
+            .bind(me)
+            .fetch_one(&mut *c)
+            .await?;
+
     Ok(json!({
         "house": state.config.house_name,
         "me": me,
@@ -164,5 +198,7 @@ pub async fn build(c: &mut PgConnection, state: &AppState, me: i32) -> AppResult
         "pending": pending,
         "log": log,
         "holiday": holiday,
+        "notifications": notifications,
+        "unread": unread,
     }))
 }

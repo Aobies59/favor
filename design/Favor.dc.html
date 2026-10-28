@@ -49,6 +49,45 @@
         </sc-for>
       </nav>
       <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+        <div style="position:relative;display:flex">
+          <button class="btn btn-secondary" onClick="{{ toggleBell }}" title="Notifications" style="position:relative;padding:7px 9px;display:flex;align-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg><sc-if value="{{ hasUnread }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-7px;right:-7px;min-width:18px;height:18px;padding:0 5px;display:grid;place-items:center;background:var(--color-accent);color:var(--color-bg);font-size:11px">{{ unreadLabel }}</span></sc-if></button>
+          <sc-if value="{{ showBell }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ closeBell }}" style="position:fixed;inset:0;z-index:6"></div>
+            <div class="blueprint" style="position:absolute;top:calc(100% + 12px);right:0;z-index:7;width:min(380px,calc(100vw - 32px));cursor:default;overflow:hidden;box-sizing:border-box;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-lg)">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="padding:14px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--color-divider)">
+                <div style="display:flex;align-items:baseline;gap:10px">
+                  <div style="font-family:var(--font-heading);font-weight:600;font-size:20px">Notifications</div>
+                  <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">{{ bellCount }}</div>
+                </div>
+                <sc-if value="{{ pushOff }}" hint-placeholder-val="{{ true }}">
+                  <button class="btn btn-primary" onClick="{{ enablePush }}" style="font-size:12px;padding:5px 10px;white-space:nowrap">Turn on</button>
+                </sc-if>
+                <sc-if value="{{ pushOn }}" hint-placeholder-val="{{ false }}">
+                  <button class="btn btn-ghost" onClick="{{ disablePush }}" style="font-size:12px;padding:5px 10px;white-space:nowrap">Turn off</button>
+                </sc-if>
+              </div>
+              <sc-if value="{{ pushHint }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:12px 18px;font-size:13px;line-height:1.4;color:var(--color-text-muted, var(--color-text));background:var(--color-accent-100);border-bottom:1px solid var(--color-divider)">{{ pushHintText }}</div>
+              </sc-if>
+              <div style="max-height:288px;overflow-y:auto;overflow-x:hidden">
+              <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="3">
+                <button onClick="{{ n.open }}" style-hover="box-shadow:inset 0 0 0 999px color-mix(in oklch,var(--color-text) 6%,transparent)" style="cursor:pointer;width:100%;box-sizing:border-box;text-align:left;background:{{ n.bg }};border:0;border-bottom:1px solid var(--color-divider);padding:14px 18px;display:flex;gap:12px;font:inherit;color:inherit">
+                  <span style="flex:none;width:8px;height:8px;margin-top:6px;background:{{ n.dot }}"></span>
+                  <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                    <span style="font-weight:500;font-size:14px">{{ n.title }}</span>
+                    <span style="font-size:13px;line-height:1.4;opacity:.75">{{ n.body }}</span>
+                    <span style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-accent-700)">{{ n.when }}</span>
+                  </span>
+                </button>
+              </sc-for>
+              </div>
+              <sc-if value="{{ noNotifs }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:28px 18px;text-align:center;font-size:14px;opacity:.7">Nothing yet. Enjoy the quiet.</div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
         <span style="width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600">{{ meInitial }}</span>
         <span style="font-weight:500">{{ meName }}</span>
         <button class="btn btn-secondary" onClick="{{ openLogout }}" style="font-size:13px;display:flex;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg>Log out</button>
@@ -215,7 +254,7 @@
                   <div style="display:grid;grid-template-columns:90px minmax(0,1fr);gap:8px;font-size:13px"><span style="color:var(--color-neutral-600)">{{ l.label }}</span><span><span style="text-decoration:line-through;color:var(--color-neutral-500)">{{ l.from }}</span> <span style="font-weight:500">{{ l.to }}</span></span></div>
                 </sc-for>
               </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--color-divider)">
+              <div style="margin-top:auto;display:flex;gap:6px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--color-divider)">
                 <sc-for list="{{ p.votes }}" as="v" hint-placeholder-count="3">
                   <span style="display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 8px 3px 3px;border:1px solid var(--color-divider);background:{{ v.bg }}"><span style="width:20px;height:20px;display:grid;place-items:center;background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600;font-size:12px">{{ v.initial }}</span>{{ v.text }}</span>
                 </sc-for>
@@ -472,7 +511,12 @@ function seed(){
 }
 
 class Component extends DCLogic {
-  state = {...seed(), me:this.props.viewAs??'marta', pick:this.props.viewAs??'marta', screen:this.props.startTab??'today', modal:null, target:null, reason:'', holiday:{}, holidayNote:'', form:null, toast:'', password:'', backTo:'today', signedOut:false};
+  state = {...seed(), me:this.props.viewAs??'marta', pick:this.props.viewAs??'marta', screen:this.props.startTab??'today', modal:null, target:null, reason:'', holiday:{}, holidayNote:'', form:null, toast:'', password:'', backTo:'today', signedOut:false,
+    // Sample notifications (the live app gets these from the server).
+    bell:false, push:'off', fresh:[], notifs:[
+      {id:3,title:'Leo asks you to take Bins out',body:'Take it and you hold +1 on Leo. Or say nope.',link:'today',ago:'5 min ago',read:false},
+      {id:2,title:'New vote: Clean the oven',body:'Inés proposed it. Approve or veto it in the Editor.',link:'editor',ago:'2 h ago',read:false},
+      {id:1,title:'Approved: changes to Hoover the hall',body:'Everyone said yes. The changes are in.',link:'editor',ago:'Yesterday',read:true}]};
 
   componentDidUpdate(pp){
     if(pp.viewAs!==this.props.viewAs&&this.props.viewAs) this.setState({me:this.props.viewAs,pick:this.props.viewAs});
@@ -609,7 +653,17 @@ class Component extends DCLogic {
       password:s.password,setPassword:e=>this.setState({password:e.target.value}),cantSignIn:!s.password,
       signIn:()=>{if(s.password)this.setState({me:s.pick,screen:'today',password:'',signedOut:false});},
       loginKey:e=>{if(e.key==='Enter'&&s.password)this.setState({me:s.pick,screen:'today',password:'',signedOut:false});},
-      openLogout:()=>this.setState({modal:'logout'}),showLogout:s.modal==='logout',
+      openLogout:()=>this.setState({modal:'logout',bell:false}),showLogout:s.modal==='logout',
+      hasUnread:s.notifs.some(n=>!n.read),unreadLabel:String(s.notifs.filter(n=>!n.read).length),showBell:s.bell,
+      toggleBell:()=>this.setState(st=>st.bell?{bell:false}:{bell:true,fresh:st.notifs.filter(n=>!n.read).map(n=>n.id),notifs:st.notifs.map(n=>({...n,read:true}))}),
+      closeBell:()=>this.setState({bell:false}),bellCount:s.fresh.length?`${s.fresh.length} new`:'',
+      notifs:s.notifs.map(n=>{const isNew=s.fresh.includes(n.id);return {title:n.title,body:n.body,when:n.ago,
+        dot:isNew?'var(--color-accent)':'transparent',bg:isNew?'color-mix(in oklch,var(--color-accent-100) 60%,transparent)':'transparent',
+        open:()=>this.setState({bell:false,screen:n.link})};}),
+      noNotifs:!s.notifs.length,pushOn:s.push==='on',pushOff:s.push==='off',
+      enablePush:()=>{this.setState({push:'on'});this.flash('Notifications on. We\'ll nag you here too.');},
+      disablePush:()=>{this.setState({push:'off'});this.flash('Notifications off for this device.');},
+      pushHint:false,pushHintText:'',
       logout:()=>this.setState({screen:'login',signedOut:true,pick:me,password:'',modal:null}),
       tabs,meName:NAME[me],meInitial:NAME[me][0],
       isToday:s.screen==='today',isEditor:s.screen==='editor',isFavors:s.screen==='favors',isActivity:s.screen==='activity',

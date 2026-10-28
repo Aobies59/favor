@@ -92,6 +92,9 @@ pub async fn rollover(c: &mut PgConnection) -> AppResult<NaiveDate> {
     }
 
     sqlx::query("UPDATE app_state SET today = $1 WHERE id = 1").bind(next).execute(&mut *c).await?;
+    sqlx::query("DELETE FROM notifications WHERE created_at < now() - interval '30 days'")
+        .execute(&mut *c)
+        .await?;
     Ok(next)
 }
 
