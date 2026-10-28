@@ -1,0 +1,48 @@
+# Favor: Rust app + PostgreSQL. Paste into a Portainer stack (or run
+# `docker compose up -d`) and set the variables below in the stack's
+# environment section or a .env file next to this file.
+name: favor
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: favor
+      POSTGRES_USER: favor
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes:
+      - favor-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U favor -d favor"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    image: ${FAVOR_IMAGE:-ghcr.io/aobies59/favor:latest}
+    # Used when deploying from the Git repository (or `docker compose build`).
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://favor:${DB_PASSWORD}@db:5432/favor
+      # Password for /admin, where you add, rename and remove roommates.
+      FAVOR_ADMIN_PASSWORD: ${FAVOR_ADMIN_PASSWORD:?Set FAVOR_ADMIN_PASSWORD}
+      # Optional first-run seed (only used while there are no accounts yet):
+      # Name:password,Name:password in rotation order. Manage them on /admin after that.
+      FAVOR_USERS: ${FAVOR_USERS:-}
+      FAVOR_HOUSE_NAME: ${FAVOR_HOUSE_NAME:-Our flat}
+      # Midnight rollover runs at local midnight in this timezone.
+      FAVOR_TZ: ${FAVOR_TZ:-Europe/Madrid}
+      # Shows the "Skip to midnight" demo button. Keep false in real use.
+      FAVOR_DEMO_MIDNIGHT: ${FAVOR_DEMO_MIDNIGHT:-false}
+      # Set to true when serving over HTTPS (behind a reverse proxy).
+      FAVOR_COOKIE_SECURE: ${FAVOR_COOKIE_SECURE:-false}
+    ports:
+      - "${FAVOR_PORT:-8080}:8080"
+
+volumes:
+  favor-db:

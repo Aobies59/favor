@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Favor Admin</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { min-height: 100vh; background-image: linear-gradient(var(--color-divider) 1px, transparent 1px), linear-gradient(90deg, var(--color-divider) 1px, transparent 1px); background-size: 80px 80px; background-position: -1px -1px; }
+  main { max-width: 860px; margin: 0 auto; padding: 40px 16px 80px; display: flex; flex-direction: column; gap: 28px; }
+  .panel { background: var(--color-bg); padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+  .kicker { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--color-accent-700); }
+  .row { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; padding: 14px 0; border-top: 1px solid var(--color-divider); }
+  .order { display: flex; flex-direction: column; gap: 2px; }
+  .order .btn { padding: 2px 8px; font-size: 12px; }
+  .inline { display: flex; gap: 6px; }
+  .meta { font-size: 12px; color: var(--color-neutral-600); margin-top: 4px; }
+  .add { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+  #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 30; background: var(--color-accent-900); color: var(--color-bg); padding: 12px 20px; font-size: 14px; box-shadow: var(--shadow-lg); display: none; max-width: calc(100% - 32px); }
+  [hidden] { display: none !important; }
+  @media (max-width: 640px) {
+    .row { grid-template-columns: auto minmax(0, 1fr); }
+    .row > .name, .row > .pw { grid-column: 2; }
+    .row > .actions { grid-column: 1 / -1; }
+    .add { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px;font-family:var(--font-heading);font-weight:600;font-size:24px;letter-spacing:.02em">
+      <span style="width:14px;height:14px;background:var(--color-accent)"></span>FAVOR <span class="kicker" style="margin-left:6px">Admin</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <a class="btn btn-secondary" href="/">Back to the app</a>
+      <button class="btn btn-ghost" id="logout" hidden>Sign out</button>
+    </div>
+  </header>
+
+  <section class="panel blueprint" id="login" hidden>
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div><div class="kicker">Admin</div><h1 style="margin:0">Who's in the flat?</h1></div>
+    <p style="margin:0;color:var(--color-neutral-700)">Sign in with the admin password (<code>FAVOR_ADMIN_PASSWORD</code>).</p>
+    <form id="login-form" style="display:flex;flex-direction:column;gap:14px">
+      <div class="field"><label for="admin-pw">Admin password</label><input class="input" id="admin-pw" type="password" autocomplete="current-password" required></div>
+      <button class="btn btn-primary" type="submit" style="padding:12px;font-size:16px">Sign in</button>
+    </form>
+  </section>
+
+  <section id="manage" hidden style="display:flex;flex-direction:column;gap:28px">
+    <div>
+      <div class="kicker">Roommates</div>
+      <h1 style="margin:0">Accounts</h1>
+      <p style="margin:6px 0 0;color:var(--color-neutral-700)">Order is the rotation order. A new password signs that person out everywhere.</p>
+    </div>
+
+    <div class="panel blueprint">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div id="users"></div>
+      <div id="empty" hidden style="padding:20px;border:1px dashed var(--color-divider);color:var(--color-neutral-700)">Nobody lives here yet. Add the first roommate below.</div>
+    </div>
+
+    <div class="panel blueprint">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3 style="margin:0">Add a roommate</h3>
+      <form id="add-form" class="add">
+        <div class="field"><label for="add-name">Name</label><input class="input" id="add-name" maxlength="40" required></div>
+        <div class="field"><label for="add-pw">Password</label><input class="input" id="add-pw" type="password" autocomplete="new-password" minlength="4" required></div>
+        <button class="btn btn-primary" type="submit">Add</button>
+      </form>
+    </div>
+  </section>
+</main>
+<div id="toast" role="status"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let toastTimer;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 2800);
+}
+
+async function call(path, body) {
+  const opts = { method: body === undefined ? 'GET' : 'POST', credentials: 'same-origin', headers: {} };
+  if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  let res, data = {};
+  try {
+    res = await fetch('/api/admin' + path, opts);
+    data = await res.json().catch(() => ({}));
+  } catch (e) {
+    toast("Can't reach the server.");
+    return null;
+  }
+  if (res.status === 401) { show('login'); return null; }
+  if (!res.ok) { toast(data.error || "That didn't work."); return null; }
+  return data;
+}
+
+function show(which) {
+  $('login').hidden = which !== 'login';
+  $('manage').hidden = which !== 'manage';
+  $('logout').hidden = which !== 'manage';
+  if (which === 'login') $('admin-pw').focus();
+}
+
+function el(tag, props = {}, ...kids) {
+  const e = Object.assign(document.createElement(tag), props);
+  e.append(...kids);
+  return e;
+}
+
+function render(data) {
+  if (!data) return;
+  show('manage');
+  const list = $('users');
+  list.replaceChildren();
+  $('empty').hidden = data.users.length > 0;
+  data.users.forEach((u, i) => {
+    const up = el('button', { className: 'btn btn-secondary', type: 'button', textContent: '▲', title: 'Earlier in the rotation', disabled: i === 0 });
+    const down = el('button', { className: 'btn btn-secondary', type: 'button', textContent: '▼', title: 'Later in the rotation', disabled: i === data.users.length - 1 });
+    up.onclick = () => call(`/users/${u.id}/move`, { dir: -1 }).then(render);
+    down.onclick = () => call(`/users/${u.id}/move`, { dir: 1 }).then(render);
+
+    const nameIn = el('input', { className: 'input', value: u.name, maxLength: 40 });
+    const rename = el('button', { className: 'btn btn-secondary', type: 'button', textContent: 'Rename' });
+    rename.onclick = async () => {
+      const name = nameIn.value.trim();
+      if (!name || name === u.name) return;
+      const d = await call(`/users/${u.id}`, { name });
+      if (d) { toast(`${u.name} is now ${name}.`); render(d); }
+    };
+
+    const pwIn = el('input', { className: 'input', type: 'password', placeholder: 'New password', autocomplete: 'new-password' });
+    const setPw = el('button', { className: 'btn btn-secondary', type: 'button', textContent: 'Set' });
+    setPw.onclick = async () => {
+      if (!pwIn.value) return;
+      const d = await call(`/users/${u.id}`, { password: pwIn.value });
+      if (d) { toast(`New password set for ${u.name}. They've been signed out.`); render(d); }
+    };
+
+    const del = el('button', { className: 'btn btn-ghost', type: 'button', textContent: 'Remove' });
+    del.onclick = async () => {
+      if (!confirm(`Remove ${u.name}? Their tasks pass to the next person in the rotation, and their favor balances, missed tasks and proposals are deleted. This can't be undone.`)) return;
+      const d = await call(`/users/${u.id}/delete`, {});
+      if (d) { toast(`${u.name} moved out.`); render(d); }
+    };
+
+    const signedIn = u.sessions === 1 ? 'Signed in on 1 device' : `Signed in on ${u.sessions} devices`;
+    list.append(el('div', { className: 'row' },
+      el('div', { className: 'order' }, up, down),
+      el('div', { className: 'field name' }, el('label', { textContent: `#${i + 1} · Name` }), el('div', { className: 'inline' }, nameIn, rename), el('div', { className: 'meta', textContent: signedIn })),
+      el('div', { className: 'field pw' }, el('label', { textContent: 'Password' }), el('div', { className: 'inline' }, pwIn, setPw), el('div', { className: 'meta', textContent: ' ' })),
+      el('div', { className: 'actions', style: 'align-self:center' }, del),
+    ));
+  });
+}
+
+$('login-form').onsubmit = async e => {
+  e.preventDefault();
+  const ok = await call('/login', { password: $('admin-pw').value });
+  if (ok) { $('admin-pw').value = ''; render(await call('/users')); }
+};
+$('add-form').onsubmit = async e => {
+  e.preventDefault();
+  const name = $('add-name').value.trim();
+  const d = await call('/users', { name, password: $('add-pw').value });
+  if (d) { $('add-name').value = ''; $('add-pw').value = ''; toast(`${name} moved in.`); render(d); }
+};
+$('logout').onclick = async () => { await call('/logout', {}); show('login'); };
+
+(async () => {
+  try {
+    const res = await fetch('/api/admin/users', { credentials: 'same-origin' });
+    if (res.ok) return render(await res.json());
+    if (res.status === 403) {
+      const d = await res.json().catch(() => ({}));
+      $('login').hidden = false;
+      $('login-form').hidden = true;
+      $('login').querySelector('p').textContent = d.error || 'The admin page is off.';
+      return;
+    }
+  } catch (e) {}
+  show('login');
+})();
+</script>
+</body>
+</html>

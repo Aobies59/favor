@@ -33,3 +33,7 @@ Cargo.lock
 *.pdb
 
 # End of https://www.toptal.com/developers/gitignore/api/linux,rust
+
+# Favor: an app, so keep the lockfile (the Docker build uses --locked)
+!Cargo.lock
+.env

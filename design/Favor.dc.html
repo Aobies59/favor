@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/industry-edfa9f87-ed73-4041-be65-44669057ad06/styles.css">
+<script src="_ds/industry-edfa9f87-ed73-4041-be65-44669057ad06/_ds_bundle.js"></script>
+<style>body{margin:0;background:#f2f2f3}a{color:#416180}a:hover{color:#2c455d}</style>
+</helmet>
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);background-image:linear-gradient(var(--color-divider) 1px,transparent 1px),linear-gradient(90deg,var(--color-divider) 1px,transparent 1px);background-size:80px 80px;background-position:-1px -1px">
+
+<sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+  <div style="min-height:100vh;display:grid;place-items:center;padding:40px">
+    <div class="blueprint" style="width:min(520px,100%);background:var(--color-bg);padding:40px;display:flex;flex-direction:column;gap:24px">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">Favor · Flat 3B</div>
+        <h1 style="margin:0;font-size:48px">Who's on the hook?</h1>
+        <p style="margin:0;color:var(--color-neutral-700)">Pick your account. Your chores are waiting (patiently, for now).</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+        <sc-for list="{{ loginUsers }}" as="u" hint-placeholder-count="3">
+          <button onClick="{{ u.pick }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 8px;background:{{ u.bg }};border:1px solid {{ u.border }};font:inherit;color:inherit">
+            <span style="width:48px;height:48px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600;font-size:22px">{{ u.initial }}</span>
+            <span style="font-family:var(--font-heading);font-weight:600;font-size:18px">{{ u.name }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div class="field"><label>Password</label><input class="input" type="password" value="hunter22" readOnly="{{ true }}"></div>
+      <button class="btn btn-primary blueprint" onClick="{{ signIn }}" style="padding:12px;font-size:16px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Sign in as {{ loginName }}</button>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+  <header style="position:sticky;top:0;z-index:5;background:var(--color-bg);border-bottom:1px solid var(--color-divider)">
+    <div style="max-width:1240px;margin:0 auto;padding:0 40px;display:flex;align-items:stretch;gap:32px;height:60px">
+      <div style="display:flex;align-items:center;gap:10px;font-family:var(--font-heading);font-weight:600;font-size:24px;letter-spacing:.02em">
+        <span style="width:14px;height:14px;background:var(--color-accent)"></span>FAVOR
+      </div>
+      <nav style="display:flex;gap:4px;align-items:stretch">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+          <button onClick="{{ t.go }}" style="cursor:pointer;background:none;border:0;border-bottom:2px solid {{ t.line }};color:{{ t.color }};font-family:var(--font-heading);font-weight:600;font-size:17px;padding:0 14px;display:flex;align-items:center;gap:8px">{{ t.label }}<sc-if value="{{ t.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:18px;height:18px;padding:0 5px;display:grid;place-items:center;background:var(--color-accent);color:var(--color-bg);font-family:var(--font-body);font-size:11px">{{ t.badge }}</span></sc-if></button>
+        </sc-for>
+      </nav>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+        <button class="btn btn-ghost" onClick="{{ midnight }}" title="Demo: end the day and apply penalties" style="font-size:13px;display:flex;gap:6px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>Skip to midnight
+        </button>
+        <div style="width:1px;height:24px;background:var(--color-divider)"></div>
+        <span style="width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600">{{ meInitial }}</span>
+        <span style="font-weight:500">{{ meName }}</span>
+        <button class="btn btn-secondary" onClick="{{ logout }}" style="font-size:13px">Switch</button>
+      </div>
+    </div>
+  </header>
+
+  <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+    <main style="max-width:1240px;margin:0 auto;padding:40px 40px 80px;display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:40px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:32px;min-width:0">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700);margin-bottom:6px">{{ dateLabel }}</div>
+            <h1 style="margin:0;font-size:52px">Your tasks, {{ meName }}</h1>
+            <p style="margin:6px 0 0;color:var(--color-neutral-700);text-wrap:pretty">{{ todaySub }}</p>
+            <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
+              <sc-if value="{{ holidayNone }}" hint-placeholder-val="{{ true }}">
+                <button class="btn btn-secondary" onClick="{{ openHoliday }}" style="display:flex;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path></svg>Go on holiday</button>
+              </sc-if>
+              <sc-if value="{{ holidayPending }}" hint-placeholder-val="{{ false }}">
+                <span class="tag tag-accent">Holiday request sent. Waiting for a roommate to approve.</span>
+                <button class="btn btn-ghost" onClick="{{ withdrawHoliday }}">Withdraw</button>
+              </sc-if>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <div style="font-family:var(--font-heading);font-weight:600;font-size:40px;line-height:1">{{ doneCount }}<span style="color:var(--color-neutral-500)">/{{ totalCount }}</span></div>
+            <div style="display:flex;gap:3px"><sc-for list="{{ progress }}" as="p" hint-placeholder-count="4"><span style="width:22px;height:6px;background:{{ p.bg }};border:1px solid var(--color-accent)"></span></sc-for></div>
+          </div>
+        </div>
+
+        <sc-if value="{{ isAway }}" hint-placeholder-val="{{ false }}">
+          <div class="blueprint" style="background:var(--color-accent-900);color:var(--color-bg);padding:32px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="flex:1 1 260px">
+              <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-300);margin-bottom:6px">On holiday since {{ awaySince }}</div>
+              <div style="font-family:var(--font-heading);font-weight:600;font-size:36px;line-height:1.1">You're off the rota.</div>
+              <div style="font-size:14px;color:var(--color-accent-200);margin-top:6px">{{ awayNote }}No new tasks and no favor lost until you're back.</div>
+            </div>
+            <button class="btn" onClick="{{ comeBack }}" style="background:var(--color-bg);color:var(--color-accent-900);border-color:var(--color-bg);padding:12px 20px;font-size:16px">I'm back</button>
+          </div>
+        </sc-if>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <sc-for list="{{ myTasks }}" as="m" hint-placeholder-count="3">
+            <div class="blueprint" style="background:var(--color-bg);padding:18px 20px;display:grid;display:flex;flex-wrap:wrap;gap:16px 20px;align-items:center;opacity:{{ m.opacity }}">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="display:flex;flex-direction:column;gap:6px;width:96px;flex:none">
+                <div style="display:flex;gap:3px"><sc-for list="{{ m.pips }}" as="p" hint-placeholder-count="3"><span style="width:12px;height:12px;border:1px solid var(--color-accent);background:{{ p.bg }}"></span></sc-for></div>
+                <span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent-700)">{{ m.diffLabel }} · {{ m.value }}</span>
+              </div>
+              <div style="min-width:200px;flex:1 1 200px">
+                <div style="font-family:var(--font-heading);font-weight:600;font-size:24px;line-height:1.15;text-decoration:{{ m.strike }}">{{ m.name }}</div>
+                <div style="font-size:13px;color:var(--color-neutral-700);margin-top:3px">{{ m.meta }}</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap">
+                <sc-if value="{{ m.isOpen }}" hint-placeholder-val="{{ true }}">
+                  <button class="btn btn-secondary" onClick="{{ m.onCant }}">Can't do</button>
+                  <button class="btn btn-secondary" onClick="{{ m.onHand }}" style="display:flex;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"></path><path d="M20 7H4"></path><path d="m8 21-4-4 4-4"></path><path d="M4 17h16"></path></svg>Hand off</button>
+                  <button class="btn btn-primary" onClick="{{ m.onDone }}" style="display:flex;gap:6px;padding-inline:16px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Done</button>
+                </sc-if>
+                <sc-if value="{{ m.hasStatus }}" hint-placeholder-val="{{ false }}">
+                  <span class="tag tag-accent" style="max-width:280px">{{ m.statusText }}</span>
+                  <sc-if value="{{ m.canUndo }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost" onClick="{{ m.onUndo }}">{{ m.undoLabel }}</button></sc-if>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noTasks }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:40px;border:1px dashed var(--color-divider);text-align:center;color:var(--color-neutral-700)">Nothing on your plate today. Suspicious, but enjoy it.</div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ hasMissed }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:baseline;gap:10px"><h3 style="margin:0">Missed</h3><span style="font-size:13px;color:var(--color-neutral-600)">Did it but forgot to tick it? Get a roommate to confirm and your favor comes back.</span></div>
+            <div style="display:flex;flex-direction:column;border-top:1px solid var(--color-divider)">
+              <sc-for list="{{ missed }}" as="x" hint-placeholder-count="1">
+                <div style="display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:14px 0;border-bottom:1px solid var(--color-divider)">
+                  <div style="display:flex;gap:3px;width:96px;flex:none"><sc-for list="{{ x.pips }}" as="p" hint-placeholder-count="3"><span style="width:12px;height:12px;border:1px solid var(--color-accent-900);background:{{ p.bg }}"></span></sc-for></div>
+                  <div style="flex:1 1 200px;min-width:200px">
+                    <div style="font-family:var(--font-heading);font-weight:600;font-size:20px;line-height:1.15">{{ x.name }}</div>
+                    <div style="font-size:13px;color:var(--color-neutral-700)">{{ x.meta }}</div>
+                  </div>
+                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <sc-if value="{{ x.isMissed }}" hint-placeholder-val="{{ true }}">
+                      <button class="btn btn-ghost" onClick="{{ x.onDismiss }}">Fair enough</button>
+                      <button class="btn btn-secondary" onClick="{{ x.onClaim }}" style="display:flex;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>I did it, forgot to tick</button>
+                    </sc-if>
+                    <sc-if value="{{ x.hasStatus }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent">{{ x.statusText }}</span></sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <h3 style="margin:0">Everyone else</h3>
+          <table class="table">
+            <thead><tr><th>Task</th><th>Who</th><th>Difficulty</th><th>Status</th></tr></thead>
+            <tbody>
+              <sc-for list="{{ others }}" as="o" hint-placeholder-count="3">
+                <tr><td style="font-weight:500">{{ o.name }}</td><td>{{ o.who }}</td><td>{{ o.diffLabel }}</td><td><span class="tag tag-neutral">{{ o.status }}</span></td></tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside style="display:flex;flex-direction:column;gap:28px;position:sticky;top:92px">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between"><h3 style="margin:0">Needs you</h3><span style="font-size:12px;color:var(--color-neutral-600)">{{ inboxCount }}</span></div>
+          <sc-for list="{{ inbox }}" as="r" hint-placeholder-count="2">
+            <div class="blueprint" style="background:var(--color-bg);padding:16px;display:flex;flex-direction:column;gap:8px">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">{{ r.kicker }}</div>
+              <div style="font-family:var(--font-heading);font-weight:600;font-size:19px;line-height:1.2">{{ r.title }}</div>
+              <div style="font-size:13px;color:var(--color-neutral-700)">{{ r.sub }}</div>
+              <div style="display:flex;gap:8px;margin-top:4px"><button class="btn btn-secondary" onClick="{{ r.onNo }}" style="flex:1">{{ r.noLabel }}</button><button class="btn btn-primary" onClick="{{ r.onYes }}" style="flex:1">{{ r.yesLabel }}</button></div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ inboxEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:20px;border:1px dashed var(--color-divider);font-size:14px;color:var(--color-neutral-700)">Nobody's asking you for anything. Rare.</div>
+          </sc-if>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between"><h3 style="margin:0">Your favor</h3><button class="btn btn-ghost" onClick="{{ goFavors }}" style="font-size:13px">Ledger</button></div>
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="2">
+            <div style="display:grid;grid-template-columns:30px auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--color-divider)">
+              <span style="width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600">{{ c.initial }}</span>
+              <span style="font-weight:500">{{ c.name }}</span>
+              <span style="display:flex;flex-direction:column;gap:2px;margin-left:-4px"><sc-if value="{{ c.away }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:var(--color-accent-700)">On holiday</span></sc-if></span>
+              <span class="tag tag-accent" title="Favor you can spend on them">You hold&nbsp;{{ c.mine }}</span>
+              <span class="tag tag-neutral" title="Favor they can spend on you">They hold&nbsp;{{ c.theirs }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </aside>
+    </main>
+  </sc-if>
+
+  <sc-if value="{{ isEditor }}" hint-placeholder-val="{{ false }}">
+    <main style="max-width:1240px;margin:0 auto;padding:40px 40px 80px;display:flex;flex-direction:column;gap:40px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700);margin-bottom:6px">Editor</div>
+          <h1 style="margin:0;font-size:52px">House rules</h1>
+          <p style="margin:6px 0 0;color:var(--color-neutral-700)">Every change needs a yes from all {{ userCount }} of you. One no and it's gone.</p>
+        </div>
+        <button class="btn btn-primary blueprint" onClick="{{ openAdd }}" style="padding:10px 18px;font-size:16px;display:flex;gap:8px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Propose a task</button>
+      </div>
+
+      <section style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;gap:10px"><h3 style="margin:0">Pending changes</h3><span style="font-size:13px;color:var(--color-neutral-600)">{{ pendingCountLabel }}</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px">
+          <sc-for list="{{ pending }}" as="p" hint-placeholder-count="2">
+            <div class="blueprint" style="background:var(--color-bg);padding:20px;display:flex;flex-direction:column;gap:12px">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span class="tag tag-outline">{{ p.kindLabel }}</span><span style="font-size:12px;color:var(--color-neutral-600)">Proposed by {{ p.by }}</span></div>
+              <div style="font-family:var(--font-heading);font-weight:600;font-size:24px;line-height:1.15">{{ p.title }}</div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <sc-for list="{{ p.lines }}" as="l" hint-placeholder-count="2">
+                  <div style="display:grid;grid-template-columns:90px minmax(0,1fr);gap:8px;font-size:13px"><span style="color:var(--color-neutral-600)">{{ l.label }}</span><span><span style="text-decoration:line-through;color:var(--color-neutral-500)">{{ l.from }}</span> <span style="font-weight:500">{{ l.to }}</span></span></div>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--color-divider)">
+                <sc-for list="{{ p.votes }}" as="v" hint-placeholder-count="3">
+                  <span style="display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 8px 3px 3px;border:1px solid var(--color-divider);background:{{ v.bg }}"><span style="width:20px;height:20px;display:grid;place-items:center;background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600;font-size:12px">{{ v.initial }}</span>{{ v.text }}</span>
+                </sc-for>
+              </div>
+              <sc-if value="{{ p.canVote }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;gap:8px"><button class="btn btn-secondary" onClick="{{ p.onNo }}" style="flex:1">Veto</button><button class="btn btn-primary" onClick="{{ p.onYes }}" style="flex:1">Approve</button></div>
+              </sc-if>
+              <sc-if value="{{ p.voted }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:13px;color:var(--color-neutral-700)">{{ p.waitText }}</div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ noPending }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:24px;border:1px dashed var(--color-divider);color:var(--color-neutral-700)">No proposals on the table. Peaceful.</div>
+        </sc-if>
+      </section>
+
+      <section style="display:flex;flex-direction:column;gap:10px">
+        <h3 style="margin:0">All tasks</h3>
+        <table class="table">
+          <thead><tr><th>Task</th><th>Difficulty</th><th>Frequency</th><th>Assignment</th><th>Up now</th><th></th></tr></thead>
+          <tbody>
+            <sc-for list="{{ taskRows }}" as="t" hint-placeholder-count="5">
+              <tr>
+                <td style="font-weight:500;display:flex;gap:8px;align-items:center">{{ t.name }}<sc-if value="{{ t.locked }}" hint-placeholder-val="{{ false }}"><span class="tag tag-outline" style="font-size:10px">Vote pending</span></sc-if></td>
+                <td><span style="display:inline-flex;gap:8px;align-items:center"><span style="display:flex;gap:2px"><sc-for list="{{ t.pips }}" as="p" hint-placeholder-count="3"><span style="width:9px;height:9px;border:1px solid var(--color-accent);background:{{ p.bg }}"></span></sc-for></span>{{ t.diffLabel }}</span></td>
+                <td>{{ t.freq }}</td>
+                <td>{{ t.mode }}</td>
+                <td>{{ t.up }}</td>
+                <td style="text-align:right;white-space:nowrap">
+                  <button class="btn btn-ghost" onClick="{{ t.onEdit }}" disabled="{{ t.locked }}" title="Propose edit"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path></svg></button>
+                  <button class="btn btn-ghost" onClick="{{ t.onDelete }}" disabled="{{ t.locked }}" title="Propose deletion"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+                </td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </sc-if>
+
+  <sc-if value="{{ isFavors }}" hint-placeholder-val="{{ false }}">
+    <main style="max-width:1240px;margin:0 auto;padding:40px 40px 80px;display:flex;flex-direction:column;gap:32px">
+      <div>
+        <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700);margin-bottom:6px">Favors</div>
+        <h1 style="margin:0;font-size:52px">Who owes who</h1>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid var(--color-divider);background:var(--color-bg)">
+        <div style="padding:18px 20px;border-right:1px solid var(--color-divider)"><div style="font-family:var(--font-heading);font-weight:600;font-size:18px">Earn</div><div style="font-size:14px;color:var(--color-neutral-700)">Take a task someone hands you and you hold its value on them. Easy 1, Medium 2, Hard 3.</div></div>
+        <div style="padding:18px 20px;border-right:1px solid var(--color-divider)"><div style="font-family:var(--font-heading);font-weight:600;font-size:18px">Spend</div><div style="font-size:14px;color:var(--color-neutral-700)">Use what you hold on someone to hand them a task. No asking.</div></div>
+        <div style="padding:18px 20px"><div style="font-family:var(--font-heading);font-weight:600;font-size:18px">Lose</div><div style="font-size:14px;color:var(--color-neutral-700)">Miss a task and you lose its value with everyone. Balances stop at zero.</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:28px">
+        <sc-for list="{{ ledgers }}" as="g" hint-placeholder-count="2">
+          <div class="blueprint" style="background:var(--color-bg);padding:24px;display:flex;flex-direction:column;gap:20px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600;font-size:20px">{{ g.initial }}</span>
+              <span style="font-family:var(--font-heading);font-weight:600;font-size:28px">You &amp; {{ g.name }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--color-divider)">
+              <div style="padding:16px;background:var(--color-accent);color:var(--color-bg)"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase">You hold on {{ g.name }}</div><div style="font-family:var(--font-heading);font-weight:600;font-size:56px;line-height:1">{{ g.mine }}</div></div>
+              <div style="padding:16px"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ g.name }} holds on you</div><div style="font-family:var(--font-heading);font-weight:600;font-size:56px;line-height:1">{{ g.theirs }}</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:4px">Between you two</div>
+              <sc-for list="{{ g.history }}" as="h" hint-placeholder-count="3">
+                <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--color-divider);font-size:14px"><span>{{ h.text }}</span><span style="white-space:nowrap;color:var(--color-accent-700);font-weight:500">{{ h.delta }}</span></div>
+              </sc-for>
+              <sc-if value="{{ g.noHistory }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:var(--color-neutral-600);padding:8px 0">No favors traded yet.</div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </main>
+  </sc-if>
+
+  <sc-if value="{{ isActivity }}" hint-placeholder-val="{{ false }}">
+    <main style="max-width:860px;margin:0 auto;padding:40px 40px 80px;display:flex;flex-direction:column;gap:24px">
+      <div>
+        <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700);margin-bottom:6px">Activity</div>
+        <h1 style="margin:0;font-size:52px">The record</h1>
+      </div>
+      <div style="display:flex;flex-direction:column;border-top:1px solid var(--color-divider)">
+        <sc-for list="{{ activity }}" as="a" hint-placeholder-count="6">
+          <div style="display:grid;grid-template-columns:110px 12px minmax(0,1fr) auto;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--color-divider)">
+            <span style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-neutral-600)">{{ a.day }}</span>
+            <span style="width:10px;height:10px;border:1px solid var(--color-accent);background:{{ a.dot }}"></span>
+            <span style="font-size:15px">{{ a.text }}</span>
+            <span style="font-size:13px;font-weight:500;color:var(--color-accent-700);white-space:nowrap">{{ a.delta }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </main>
+  </sc-if>
+
+  <sc-if value="{{ showHand }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" onClick="{{ closeModal }}" style="z-index:20">
+      <div class="dialog blueprint" onClick="{{ stop }}" style="background:var(--color-bg);width:min(520px,100%)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">Hand off · worth {{ handValue }}</div>
+        <div class="dialog-title" style="font-size:28px">Who gets {{ handName }}?</div>
+        <div class="dialog-body">Ask and they choose (they'd earn {{ handValue }} on you). Or spend favor you hold on them and it's theirs, no questions.</div>
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ handTargets }}" as="h" hint-placeholder-count="2">
+            <div style="display:grid;grid-template-columns:36px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:12px 0;border-top:1px solid var(--color-divider)">
+              <span style="width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600;font-size:17px">{{ h.initial }}</span>
+              <div><div style="font-weight:500">{{ h.name }}</div><div style="font-size:12px;color:var(--color-neutral-600)">You hold {{ h.mine }}</div></div>
+              <button class="btn btn-secondary" onClick="{{ h.onAsk }}">Ask nicely</button>
+              <button class="btn btn-primary" onClick="{{ h.onSpend }}" disabled="{{ h.cantSpend }}" title="{{ h.spendTitle }}">Spend {{ handValue }}</button>
+            </div>
+          </sc-for>
+        </div>
+        <div class="dialog-actions"><button class="btn btn-ghost" onClick="{{ closeModal }}">Never mind</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showCant }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" onClick="{{ closeModal }}" style="z-index:20">
+      <div class="dialog blueprint" onClick="{{ stop }}" style="background:var(--color-bg);width:min(480px,100%)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">Can't be done</div>
+        <div class="dialog-title" style="font-size:28px">What's stopping {{ cantName }}?</div>
+        <div class="dialog-body">If any roommate approves, it's excused and nobody loses favor. If not, it's still yours.</div>
+        <div class="field"><label>Reason</label><textarea class="input" value="{{ reason }}" onChange="{{ setReason }}" placeholder="We're out of bin bags and the shop's closed"></textarea></div>
+        <div class="dialog-actions"><button class="btn btn-ghost" onClick="{{ closeModal }}">Cancel</button><button class="btn btn-primary" onClick="{{ submitCant }}" disabled="{{ reasonEmpty }}">Ask for a pass</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showForm }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" onClick="{{ closeModal }}" style="z-index:20">
+      <div class="dialog blueprint" onClick="{{ stop }}" style="background:var(--color-bg);width:min(560px,100%);gap:18px">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">{{ formKicker }}</div>
+        <div class="dialog-title" style="font-size:28px">{{ formTitle }}</div>
+        <div class="field"><label>Name</label><input class="input" value="{{ form.name }}" onChange="{{ setName }}" placeholder="e.g. Descale the kettle"></div>
+        <div class="field"><label>Difficulty</label>
+          <div style="display:flex;border:1px solid var(--color-divider);width:fit-content">
+            <sc-for list="{{ diffOpts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" style="cursor:pointer;border:0;border-right:1px solid var(--color-divider);padding:8px 14px;font:inherit;font-size:13px;background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</button></sc-for>
+          </div>
+        </div>
+        <div class="field"><label>Frequency</label>
+          <div style="display:flex;gap:12px;align-items:center">
+            <div style="display:flex;border:1px solid var(--color-divider);width:fit-content">
+              <sc-for list="{{ freqOpts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" style="cursor:pointer;border:0;border-right:1px solid var(--color-divider);padding:8px 14px;font:inherit;font-size:13px;background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</button></sc-for>
+            </div>
+            <sc-if value="{{ isEvery }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:8px;font-size:14px">every <input class="input" type="number" min="2" value="{{ form.n }}" onChange="{{ setN }}" style="width:70px"> days</span></sc-if>
+          </div>
+        </div>
+        <div class="field"><label>Assignment</label>
+          <div style="display:flex;border:1px solid var(--color-divider);width:fit-content">
+            <sc-for list="{{ modeOpts }}" as="o" hint-placeholder-count="2"><button onClick="{{ o.pick }}" style="cursor:pointer;border:0;border-right:1px solid var(--color-divider);padding:8px 14px;font:inherit;font-size:13px;background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</button></sc-for>
+          </div>
+        </div>
+        <div class="field"><label>{{ ownerLabel }}</label>
+          <div style="display:flex;border:1px solid var(--color-divider);width:fit-content">
+            <sc-for list="{{ ownerOpts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" style="cursor:pointer;border:0;border-right:1px solid var(--color-divider);padding:8px 14px;font:inherit;font-size:13px;background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</button></sc-for>
+          </div>
+        </div>
+        <div class="dialog-actions"><button class="btn btn-ghost" onClick="{{ closeModal }}">Cancel</button><button class="btn btn-primary" onClick="{{ submitForm }}" disabled="{{ formInvalid }}">Send to vote</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showHoliday }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" onClick="{{ closeModal }}" style="z-index:20">
+      <div class="dialog blueprint" onClick="{{ stop }}" style="background:var(--color-bg);width:min(480px,100%)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">Go on holiday</div>
+        <div class="dialog-title" style="font-size:28px">Escaping the chores?</div>
+        <div class="dialog-body">Once a roommate approves, today's rotating tasks pass to the next person, your fixed ones are excused, and you get nothing new until you tap "I'm back".</div>
+        <div class="field"><label>Note for the house (optional)</label><textarea class="input" value="{{ holidayNote }}" onChange="{{ setHolidayNote }}" placeholder="Visiting family, back Sunday night"></textarea></div>
+        <div class="dialog-actions"><button class="btn btn-ghost" onClick="{{ closeModal }}">Cancel</button><button class="btn btn-primary" onClick="{{ submitHoliday }}">Ask the house</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:30;background:var(--color-accent-900);color:var(--color-bg);padding:12px 20px;font-size:14px;box-shadow:var(--shadow-lg)">{{ toast }}</div>
+  </sc-if>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;viewAs&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;marta&quot;,&quot;leo&quot;,&quot;ines&quot;],&quot;default&quot;:&quot;marta&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;startTab&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;login&quot;,&quot;today&quot;,&quot;editor&quot;,&quot;favors&quot;,&quot;activity&quot;],&quot;default&quot;:&quot;today&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const USERS=[{id:'marta',name:'Marta'},{id:'leo',name:'Leo'},{id:'ines',name:'Inés'}];
+const NAME=Object.fromEntries(USERS.map(u=>[u.id,u.name]));
+const VAL={easy:1,medium:2,hard:3};
+const DL={easy:'Easy',medium:'Medium',hard:'Hard'};
+const freqLabel=f=>f.type==='daily'?'Daily':f.type==='weekly'?'Weekly':`Every ${f.n} days`;
+const period=f=>f.type==='daily'?1:f.type==='weekly'?7:f.n;
+const nextUser=(id,away={})=>{let i=USERS.findIndex(u=>u.id===id);for(let k=0;k<USERS.length;k++){i=(i+1)%USERS.length;if(!away[USERS[i].id])return USERS[i].id;}return id;};
+const pips=d=>[1,2,3].map(i=>({bg:i<=VAL[d]?'var(--color-accent)':'transparent'}));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const others=me=>USERS.filter(u=>u.id!==me);
+const ALL=USERS.map(u=>u.id);
+let uid=100;
+
+function seed(){
+  return {
+    day:0,
+    tasks:[
+      {id:'t1',name:'Dishes',diff:'medium',freq:{type:'daily'},mode:'rotate',assignee:'marta',due:0},
+      {id:'t2',name:'Take out the trash',diff:'easy',freq:{type:'every',n:2},mode:'rotate',assignee:'leo',due:0},
+      {id:'t3',name:'Clean the bathroom',diff:'hard',freq:{type:'weekly'},mode:'rotate',assignee:'marta',due:0},
+      {id:'t4',name:'Water the plants',diff:'easy',freq:{type:'every',n:3},mode:'fixed',assignee:'ines',due:0},
+      {id:'t5',name:'Vacuum the living room',diff:'medium',freq:{type:'weekly'},mode:'rotate',assignee:'ines',due:0},
+      {id:'t6',name:'Wipe kitchen counters',diff:'easy',freq:{type:'daily'},mode:'fixed',assignee:'marta',due:0},
+      {id:'t7',name:'Grocery run',diff:'medium',freq:{type:'weekly'},mode:'fixed',assignee:'leo',due:3},
+    ],
+    today:[
+      {id:'d1',taskId:'t1',assignee:'marta',status:'done'},
+      {id:'d2',taskId:'t2',assignee:'leo',status:'handoff',handTo:'marta'},
+      {id:'d3',taskId:'t3',assignee:'marta',status:'open',daysLeft:4},
+      {id:'d4',taskId:'t4',assignee:'ines',status:'cantdo',reason:'Away until Friday, sorry!'},
+      {id:'d5',taskId:'t5',assignee:'ines',status:'open',daysLeft:4},
+      {id:'d6',taskId:'t6',assignee:'marta',status:'open'},
+    ],
+    missed:[
+      {id:'x1',taskId:'t6',assignee:'marta',day:-1,lost:{leo:1,ines:1},status:'missed'},
+      {id:'x2',taskId:'t2',assignee:'leo',day:-1,lost:{marta:1,ines:1},status:'missed'},
+    ],
+    bal:{marta:{leo:3,ines:1},leo:{marta:0,ines:2},ines:{marta:2,leo:0}},
+    pending:[
+      {id:'p1',kind:'add',by:'leo',data:{name:'Defrost the freezer',diff:'hard',freq:{type:'every',n:30},mode:'rotate',owner:'marta'},votes:{leo:true,ines:true,marta:null}},
+      {id:'p2',kind:'edit',taskId:'t4',by:'ines',data:{name:'Water the plants',diff:'easy',freq:{type:'every',n:4},mode:'fixed',owner:'ines'},votes:{ines:true,marta:null,leo:null}},
+    ],
+    log:[
+      {day:0,kind:'cant',text:'Inés can\'t do Water the plants: "Away until Friday, sorry!"',who:['ines']},
+      {day:0,kind:'ask',text:'Leo asked Marta to take Take out the trash',who:['leo','marta']},
+      {day:0,kind:'done',text:'Marta did Dishes',who:['marta']},
+      {day:-1,kind:'favor',text:'Leo took Dishes from Inés',delta:'Leo +2 on Inés',who:['leo','ines']},
+      {day:-1,kind:'miss',text:'Leo missed Take out the trash',delta:'−1 with everyone',who:ALL},
+      {day:-2,kind:'favor',text:'Marta took Clean the bathroom from Leo',delta:'Marta +3 on Leo',who:['marta','leo']},
+      {day:-2,kind:'vote',text:'Everyone approved a new task: Grocery run',who:ALL},
+      {day:-3,kind:'favor',text:'Inés took Vacuum the living room from Marta',delta:'Inés +2 on Marta',who:['ines','marta']},
+      {day:-3,kind:'favor',text:'Marta took Water the plants from Inés',delta:'Marta +1 on Inés',who:['marta','ines']},
+    ],
+  };
+}
+
+class Component extends DCLogic {
+  state = {...seed(), me:this.props.viewAs??'marta', pick:this.props.viewAs??'marta', screen:this.props.startTab??'today', modal:null, target:null, reason:'', holiday:{}, holidayNote:'', form:null, toast:''};
+
+  componentDidUpdate(pp){
+    if(pp.viewAs!==this.props.viewAs&&this.props.viewAs) this.setState({me:this.props.viewAs,pick:this.props.viewAs});
+    if(pp.startTab!==this.props.startTab&&this.props.startTab) this.setState({screen:this.props.startTab});
+  }
+  task(id){return this.state.tasks.find(t=>t.id===id);}
+  flash(msg){this.setState({toast:msg});clearTimeout(this._t);this._t=setTimeout(()=>this.setState({toast:''}),2600);}
+  addLog(s,e){return [{day:s.day,...e},...s.log];}
+  upd(itemId,fn){this.setState(s=>{const n=clone({today:s.today,bal:s.bal,log:s.log});const it=n.today.find(i=>i.id===itemId);fn(it,n,s);return {today:n.today,bal:n.bal,log:n.log};});}
+
+  done(it){const t=this.task(it.taskId);this.upd(it.id,(x,n,s)=>{x.status='done';n.log=this.addLog(s,{kind:'done',text:`${NAME[x.assignee]} did ${t.name}`,who:[x.assignee]});});this.flash(`${t.name}: done. Look at you.`);}
+  undo(it){this.upd(it.id,x=>{x.status='open';delete x.handTo;delete x.reason;});}
+  ask(it,to){const t=this.task(it.taskId);this.upd(it.id,(x,n,s)=>{x.status='handoff';x.handTo=to;n.log=this.addLog(s,{kind:'ask',text:`${NAME[x.assignee]} asked ${NAME[to]} to take ${t.name}`,who:[x.assignee,to]});});this.setState({modal:null});this.flash(`Asked ${NAME[to]}. Fingers crossed.`);}
+  spend(it,to){const t=this.task(it.taskId),v=VAL[t.diff];this.upd(it.id,(x,n,s)=>{const from=x.assignee;n.bal[from][to]-=v;x.assignee=to;x.status='open';n.log=this.addLog(s,{kind:'spend',text:`${NAME[from]} spent favor to give ${t.name} to ${NAME[to]}`,delta:`${NAME[from]} −${v} on ${NAME[to]}`,who:[from,to]});});this.setState({modal:null});this.flash(`${t.name} is ${NAME[to]}'s now. −${v} favor.`);}
+  accept(it){const t=this.task(it.taskId),v=VAL[t.diff];this.upd(it.id,(x,n,s)=>{const from=x.assignee,to=x.handTo;n.bal[to][from]=(n.bal[to][from]||0)+v;x.assignee=to;x.status='open';delete x.handTo;n.log=this.addLog(s,{kind:'favor',text:`${NAME[to]} took ${t.name} from ${NAME[from]}`,delta:`${NAME[to]} +${v} on ${NAME[from]}`,who:[to,from]});});this.flash(`Taken. +${v} on ${NAME[it.assignee]}.`);}
+  decline(it){const t=this.task(it.taskId);this.upd(it.id,(x,n,s)=>{n.log=this.addLog(s,{kind:'ask',text:`${NAME[x.handTo]} declined ${t.name}`,who:[x.handTo,x.assignee]});x.status='open';delete x.handTo;});}
+  approveCant(it){const t=this.task(it.taskId),me=this.state.me;this.upd(it.id,(x,n,s)=>{x.status='excused';n.log=this.addLog(s,{kind:'cant',text:`${NAME[me]} excused ${NAME[x.assignee]} from ${t.name}`,who:[me,x.assignee]});});}
+  denyCant(it){const t=this.task(it.taskId),me=this.state.me;this.upd(it.id,(x,n,s)=>{x.status='open';n.log=this.addLog(s,{kind:'cant',text:`${NAME[me]} didn't excuse ${NAME[x.assignee]} from ${t.name}`,who:[me,x.assignee]});delete x.reason;});}
+  submitCant(){const it=this.state.target,t=this.task(it.taskId),r=this.state.reason.trim();this.upd(it.id,(x,n,s)=>{x.status='cantdo';x.reason=r;n.log=this.addLog(s,{kind:'cant',text:`${NAME[x.assignee]} can't do ${t.name}: "${r}"`,who:[x.assignee]});});this.setState({modal:null,reason:''});}
+
+  setMissed(id,fn){this.setState(s=>{const n=clone({missed:s.missed,bal:s.bal,log:s.log});const x=n.missed.find(m=>m.id===id);fn(x,n,s);n.missed=n.missed.filter(m=>m.status!=='gone');return n;});}
+  claimMissed(x){const t=this.task(x.taskId);this.setMissed(x.id,(m,n,s)=>{m.status='claimed';n.log=this.addLog(s,{kind:'cant',text:`${NAME[m.assignee]} says they did ${t.name} but forgot to tick it`,who:[m.assignee]});});this.flash('Asked the house to confirm.');}
+  dismissMissed(x){this.setMissed(x.id,m=>{m.status='gone';});}
+  confirmMissed(x,yes){const t=this.task(x.taskId),me=this.state.me;this.setMissed(x.id,(m,n,s)=>{
+    if(yes){const tot=Object.values(m.lost).reduce((a,b)=>a+b,0);Object.entries(m.lost).forEach(([o,v])=>{n.bal[m.assignee][o]=(n.bal[m.assignee][o]||0)+v;});m.status='gone';n.log=this.addLog(s,{kind:'favor',text:`${NAME[me]} confirmed ${NAME[m.assignee]} did ${t.name}`,delta:tot?`${NAME[m.assignee]} gets ${tot} back`:'',who:[me,m.assignee]});}
+    else{m.status='denied';n.log=this.addLog(s,{kind:'cant',text:`${NAME[me]} didn't confirm ${NAME[m.assignee]} did ${t.name}`,who:[me,m.assignee]});}
+  });}
+  askHoliday(){const me=this.state.me,note=this.state.holidayNote.trim();this.setState(s=>({holiday:{...(s.holiday||{}),[me]:{status:'requested',note}},modal:null,log:this.addLog(s,{kind:'cant',text:`${NAME[me]} asked to go on holiday${note?`: "${note}"`:''}`,who:[me]})}));this.flash('Holiday request sent.');}
+  withdrawHoliday(){const me=this.state.me;this.setState(s=>{const hd={...(s.holiday||{})};delete hd[me];return {holiday:hd};});}
+  decideHoliday(u,yes){const me=this.state.me;this.setState(s=>{const hd={...(s.holiday||{})};let log=s.log,today=s.today;
+    if(!yes){delete hd[u];log=this.addLog(s,{kind:'cant',text:`${NAME[me]} turned down ${NAME[u]}'s holiday`,who:[me,u]});return {holiday:hd,log};}
+    hd[u]={...hd[u],status:'away',since:s.day};const away=Object.fromEntries(Object.entries(hd).filter(([k,v])=>v.status==='away').map(([k])=>[k,true]));
+    today=today.map(i=>{if(i.assignee!==u||!['open','handoff','cantdo'].includes(i.status))return i;const t=this.task(i.taskId);if(t&&t.mode==='rotate'){const n=nextUser(u,away);return n===u?{...i,status:'excused'}:{...i,assignee:n,status:'open',handTo:undefined};}return {...i,status:'excused'};});
+    const tasks=s.tasks.map(t=>t.mode==='rotate'&&t.assignee===u?{...t,assignee:nextUser(u,away)}:t);
+    log=this.addLog(s,{kind:'vote',text:`${NAME[me]} approved ${NAME[u]}'s holiday. Rotating tasks moved on.`,who:ALL});return {holiday:hd,today,tasks,log};});}
+  comeBack(){const me=this.state.me;this.setState(s=>{const hd={...(s.holiday||{})};delete hd[me];const today=[...s.today];s.tasks.forEach(t=>{if(t.mode==='fixed'&&t.assignee===me&&t.due===0&&!today.find(i=>i.taskId===t.id))today.push({id:'d'+(uid++),taskId:t.id,assignee:me,status:'open',...(t.freq.type==='weekly'?{daysLeft:7}:{})});});return {holiday:hd,today,log:this.addLog(s,{kind:'done',text:`${NAME[me]} is back from holiday`,who:ALL})};});this.flash('Welcome back. The dishes missed you.');}
+  midnight(){
+    this.setState(s=>{
+      const away=Object.fromEntries(Object.entries(s.holiday||{}).filter(([k,v])=>v.status==='away').map(([k])=>[k,true]));const bal=clone(s.bal);let log=[...s.log];const day=s.day+1;const keep=[];const missed=[...(s.missed||[])];
+      const tasks=s.tasks.map(t=>{
+        const it=s.today.find(i=>i.taskId===t.id);const nt={...t};
+        if(!it){nt.due=Math.max(0,t.due-1);return nt;}
+        if(t.freq.type==='weekly'&&(it.daysLeft||1)>1){keep.push({...it,daysLeft:it.daysLeft-1});return nt;}
+        if(['open','handoff','cantdo'].includes(it.status)){const v=VAL[t.diff];const lost={};others(it.assignee).forEach(o=>{const b=bal[it.assignee][o.id]||0;lost[o.id]=Math.min(b,v);bal[it.assignee][o.id]=Math.max(0,b-v);});missed.unshift({id:'x'+(uid++),taskId:t.id,assignee:it.assignee,day:s.day,lost,status:'missed'});log=[{day:s.day,kind:'miss',text:`${NAME[it.assignee]} missed ${t.name}`,delta:`−${v} with everyone`,who:ALL},...log];}
+        nt.due=t.freq.type==='weekly'?0:period(t.freq)-1;
+        if(t.mode==='rotate')nt.assignee=nextUser(t.assignee,away);
+        return nt;
+      });
+      const today=[...keep];
+      tasks.forEach(t=>{if(t.mode==='rotate'&&away[t.assignee])t.assignee=nextUser(t.assignee,away);if(t.due===0&&!away[t.assignee]&&!today.find(i=>i.taskId===t.id))today.push({id:'d'+(uid++),taskId:t.id,assignee:t.assignee,status:'open',...(t.freq.type==='weekly'?{daysLeft:7}:{})});});
+      return {day,tasks,today,bal,log,missed};
+    });
+    this.flash('Midnight. Missed tasks cost favor; new tasks dealt.');
+  }
+
+  openForm(kind,t){
+    const f=t?{name:t.name,diff:t.diff,freqType:t.freq.type,n:t.freq.n||3,mode:t.mode,owner:t.assignee}:{name:'',diff:'easy',freqType:'weekly',n:3,mode:'rotate',owner:this.state.me};
+    this.setState({modal:'form',form:{kind,taskId:t&&t.id,...f}});
+  }
+  submitForm(){
+    const f=this.state.form,me=this.state.me;
+    const data={name:f.name.trim(),diff:f.diff,freq:f.freqType==='every'?{type:'every',n:Math.max(2,+f.n||2)}:{type:f.freqType},mode:f.mode,owner:f.owner};
+    this.propose({kind:f.kind,taskId:f.taskId,data});
+    this.setState({modal:null,form:null});
+  }
+  propose(p){
+    const me=this.state.me;const votes=Object.fromEntries(ALL.map(u=>[u,u===me?true:null]));
+    this.setState(s=>({pending:[...s.pending,{id:'p'+(uid++),by:me,votes,...p}]}));
+    this.flash('Sent to the house for a vote.');
+  }
+  vote(p,yes){
+    const me=this.state.me;
+    this.setState(s=>{
+      let pending=s.pending.map(x=>x.id===p.id?{...x,votes:{...x.votes,[me]:yes}}:x);
+      const cur=pending.find(x=>x.id===p.id);let tasks=s.tasks,today=s.today,log=s.log;
+      const title=cur.data?cur.data.name:this.task(cur.taskId).name;
+      if(!yes){pending=pending.filter(x=>x.id!==p.id);log=[{day:s.day,kind:'vote',text:`${NAME[me]} vetoed: ${title}`,who:ALL},...log];}
+      else if(ALL.every(u=>cur.votes[u]===true)){
+        pending=pending.filter(x=>x.id!==p.id);const d=cur.data;
+        if(cur.kind==='add')tasks=[...tasks,{id:'t'+(uid++),name:d.name,diff:d.diff,freq:d.freq,mode:d.mode,assignee:d.owner,due:1}];
+        if(cur.kind==='edit')tasks=tasks.map(t=>t.id===cur.taskId?{...t,name:d.name,diff:d.diff,freq:d.freq,mode:d.mode,assignee:d.owner}:t);
+        if(cur.kind==='delete'){tasks=tasks.filter(t=>t.id!==cur.taskId);today=today.filter(i=>i.taskId!==cur.taskId);}
+        log=[{day:s.day,kind:'vote',text:`Everyone approved: ${cur.kind==='add'?'new task':cur.kind==='edit'?'changes to':'removing'} ${title}`,who:ALL},...log];
+      }
+      return {pending,tasks,today,log};
+    });
+  }
+
+  renderVals(){
+    const s=this.state,me=s.me;
+    const go=sc=>()=>this.setState({screen:sc});
+    const date=new Date(2026,9,28+s.day);
+    const dateLabel=date.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+    const dayName=d=>d===s.day?'Today':d===s.day-1?'Yesterday':new Date(2026,9,28+d).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    const mine=s.today.filter(i=>i.assignee===me);
+    const tk=id=>this.task(id)||{name:'(deleted)',diff:'easy',freq:{type:'daily'},mode:'fixed'};
+    const dueText=(i,t)=>t.freq.type==='weekly'?(i.daysLeft===1?'Due tonight':`${i.daysLeft} days left this week`):'Due today';
+    const myTasks=mine.map(i=>{const t=tk(i.taskId);const st=i.status;
+      const statusText=st==='done'?'Done':st==='excused'?'Excused':st==='handoff'?`Waiting on ${NAME[i.handTo]}`:st==='cantdo'?`Asked for a pass: "${i.reason}"`:'';
+      return {name:t.name,pips:pips(t.diff),diffLabel:DL[t.diff],value:VAL[t.diff],
+        meta:`${freqLabel(t.freq)} · ${t.mode==='rotate'?'Rotates':'Always yours'} · ${dueText(i,t)}`,
+        isOpen:st==='open',hasStatus:st!=='open',statusText,canUndo:st!=='excused',undoLabel:st==='done'?'Undo':'Withdraw',
+        opacity:st==='done'||st==='excused'?0.55:1,strike:st==='done'?'line-through':'none',
+        onDone:()=>this.done(i),onUndo:()=>this.undo(i),
+        onCant:()=>this.setState({modal:'cant',target:i,reason:''}),onHand:()=>this.setState({modal:'hand',target:i})};});
+    const unresolved=mine.filter(i=>['open','handoff','cantdo'].includes(i.status));
+    const risk=unresolved.reduce((a,i)=>a+VAL[tk(i.taskId).diff],0);
+    const doneCount=mine.filter(i=>i.status==='done'||i.status==='excused').length;
+    const todaySub=unresolved.length?`${unresolved.length} to go. Skip them and you lose up to ${risk} favor with each roommate.`:mine.length?'All clear. Your favor is safe tonight.':'';
+    const inbox=[];
+    s.today.forEach(i=>{const t=tk(i.taskId),v=VAL[t.diff];
+      if(i.status==='handoff'&&i.handTo===me)inbox.push({kicker:'Hand-off request',title:`${NAME[i.assignee]} wants you to take ${t.name}`,sub:`Take it and you hold +${v} on ${NAME[i.assignee]}.`,yesLabel:'Take it',noLabel:'Nope',onYes:()=>this.accept(i),onNo:()=>this.decline(i)});
+      if(i.status==='cantdo'&&i.assignee!==me)inbox.push({kicker:"Can't be done",title:`${NAME[i.assignee]} can't do ${t.name}`,sub:`"${i.reason}" Approve and nobody loses favor.`,yesLabel:'Excuse',noLabel:'Deny',onYes:()=>this.approveCant(i),onNo:()=>this.denyCant(i)});});
+    (s.missed||[]).forEach(x=>{if(x.status==='claimed'&&x.assignee!==me){const t=tk(x.taskId);inbox.push({kicker:'Forgot to tick',title:`${NAME[x.assignee]} says they did ${t.name}`,sub:`${dayName(x.day)}'s task. Confirm and their lost favor comes back.`,yesLabel:'Confirm',noLabel:"Didn't see it",onYes:()=>this.confirmMissed(x,true),onNo:()=>this.confirmMissed(x,false)});}});
+    Object.entries(s.holiday||{}).forEach(([u,hd])=>{if(hd.status==='requested'&&u!==me)inbox.push({kicker:'Holiday request',title:`${NAME[u]} wants to go on holiday`,sub:`${hd.note?`"${hd.note}" `:''}Approve and their rotating tasks pass along until they're back.`,yesLabel:'Approve',noLabel:'Not now',onYes:()=>this.decideHoliday(u,true),onNo:()=>this.decideHoliday(u,false)});});
+    const missed=(s.missed||[]).filter(x=>x.assignee===me).map(x=>{const t=tk(x.taskId);const tot=Object.values(x.lost).reduce((a,b)=>a+b,0);
+      return {name:t.name,pips:pips(t.diff).map(p=>({bg:p.bg==='transparent'?'transparent':'var(--color-accent-900)'})),meta:`Missed ${dayName(x.day).toLowerCase()} · cost you ${tot} favor`,
+        isMissed:x.status==='missed',hasStatus:x.status!=='missed',statusText:x.status==='claimed'?'Waiting for a roommate to confirm':'Not confirmed',
+        onClaim:()=>this.claimMissed(x),onDismiss:()=>this.dismissMissed(x)};});
+    const stLabel=i=>i.status==='done'?'Done':i.status==='excused'?'Excused':i.status==='handoff'?`Asking ${NAME[i.handTo]}`:i.status==='cantdo'?'Wants a pass':'To do';
+    const othersRows=s.today.filter(i=>i.assignee!==me).map(i=>{const t=tk(i.taskId);return {name:t.name,who:NAME[i.assignee],diffLabel:`${DL[t.diff]} · ${VAL[t.diff]}`,status:stLabel(i)};});
+    const chips=others(me).map(o=>({away:((s.holiday||{})[o.id]||{}).status==='away',name:o.name,initial:o.name[0],mine:s.bal[me][o.id]||0,theirs:s.bal[o.id][me]||0}));
+    const myPendingVotes=s.pending.filter(p=>p.votes[me]===null).length;
+    const tabs=[['today','Today',inbox.length],['editor','Editor',myPendingVotes],['favors','Favors',0],['activity','Activity',0]].map(([id,label,b])=>({label,go:go(id),badge:b,hasBadge:b>0,line:s.screen===id?'var(--color-accent)':'transparent',color:s.screen===id?'var(--color-text)':'var(--color-neutral-600)'}));
+    const pending=s.pending.map(p=>{const old=p.taskId&&this.task(p.taskId);const d=p.data;
+      const fmtMode=(m,o)=>m==='rotate'?'Rotates':`Always ${NAME[o]}`;
+      let lines=[];
+      if(p.kind==='add')lines=[{label:'Difficulty',from:'',to:`${DL[d.diff]} · ${VAL[d.diff]}`},{label:'Frequency',from:'',to:freqLabel(d.freq)},{label:'Assignment',from:'',to:fmtMode(d.mode,d.owner)}];
+      if(p.kind==='edit'&&old){const pairs=[['Name',old.name,d.name],['Difficulty',DL[old.diff],DL[d.diff]],['Frequency',freqLabel(old.freq),freqLabel(d.freq)],['Assignment',fmtMode(old.mode,old.assignee),fmtMode(d.mode,d.owner)]];lines=pairs.filter(x=>x[1]!==x[2]).map(([label,from,to])=>({label,from,to}));}
+      if(p.kind==='delete')lines=[{label:'Effect',from:'',to:'Removed for everyone'}];
+      const waiting=ALL.filter(u=>p.votes[u]===null).map(u=>NAME[u]);
+      return {kindLabel:p.kind==='add'?'New task':p.kind==='edit'?'Edit':'Delete',by:p.by===me?'you':NAME[p.by],title:d?d.name:(old?old.name:''),lines,
+        votes:ALL.map(u=>({initial:NAME[u][0],text:p.votes[u]===true?'Yes':p.votes[u]===false?'No':'Waiting',bg:p.votes[u]===true?'var(--color-accent-100)':'transparent'})),
+        canVote:p.votes[me]===null,voted:p.votes[me]!==null,waitText:`You said yes. Waiting on ${waiting.join(' and ')}.`,
+        onYes:()=>this.vote(p,true),onNo:()=>this.vote(p,false)};});
+    const lockedIds=new Set(s.pending.map(p=>p.taskId).filter(Boolean));
+    const taskRows=s.tasks.map(t=>{const it=s.today.find(i=>i.taskId===t.id);
+      return {name:t.name,pips:pips(t.diff),diffLabel:DL[t.diff],freq:freqLabel(t.freq),mode:t.mode==='rotate'?`Rotates · ${USERS.map(u=>u.name).join(' → ')}`:`Always ${NAME[t.assignee]}`,
+        up:it?NAME[it.assignee]:`${NAME[t.assignee]}, in ${t.due} day${t.due===1?'':'s'}`,locked:lockedIds.has(t.id),
+        onEdit:()=>this.openForm('edit',t),onDelete:()=>this.propose({kind:'delete',taskId:t.id,data:{name:t.name}})};});
+    const dayDot=k=>({miss:'var(--color-accent-900)',favor:'var(--color-accent)',spend:'var(--color-accent)',done:'var(--color-accent-300)'}[k]||'transparent');
+    const ledgers=others(me).map(o=>{const h=s.log.filter(e=>e.delta&&(e.kind==='favor'||e.kind==='spend')&&e.who.includes(me)&&e.who.includes(o.id)||(e.kind==='miss'&&(e.text.startsWith(NAME[me])||e.text.startsWith(o.name)))).slice(0,5).map(e=>({text:`${dayName(e.day)} · ${e.text}`,delta:e.delta}));
+      return {name:o.name,initial:o.name[0],mine:s.bal[me][o.id]||0,theirs:s.bal[o.id][me]||0,history:h,noHistory:!h.length};});
+    const activity=s.log.map(e=>({day:dayName(e.day),text:e.text,delta:e.delta||'',dot:dayDot(e.kind)}));
+    const tgt=s.target&&tk(s.target.taskId);const hv=tgt?VAL[tgt.diff]:0;
+    const handTargets=others(me).map(o=>{const m=s.bal[me][o.id]||0;return {name:o.name,initial:o.name[0],mine:m,cantSpend:m<hv,spendTitle:m<hv?`You need ${hv}, you hold ${m}`:'',onAsk:()=>this.ask(s.target,o.id),onSpend:()=>this.spend(s.target,o.id)};});
+    const f=s.form||{};
+    const optSet=(list,key)=>list.map(([v,label])=>({label,bg:f[key]===v?'var(--color-accent)':'transparent',fg:f[key]===v?'var(--color-bg)':'var(--color-text)',pick:()=>this.setState(st=>({form:{...st.form,[key]:v}}))}));
+    return {
+      isLogin:s.screen==='login',isApp:s.screen!=='login',
+      loginUsers:USERS.map(u=>({name:u.name,initial:u.name[0],bg:s.pick===u.id?'var(--color-accent-100)':'transparent',border:s.pick===u.id?'var(--color-accent)':'var(--color-divider)',pick:()=>this.setState({pick:u.id})})),
+      loginName:NAME[s.pick],signIn:()=>this.setState({me:s.pick,screen:'today'}),logout:()=>this.setState({screen:'login',pick:me}),
+      tabs,meName:NAME[me],meInitial:NAME[me][0],midnight:()=>this.midnight(),
+      isToday:s.screen==='today',isEditor:s.screen==='editor',isFavors:s.screen==='favors',isActivity:s.screen==='activity',
+      dateLabel,todaySub,myTasks,noTasks:!myTasks.length&&((s.holiday||{})[me]||{}).status!=='away',doneCount,totalCount:mine.length,
+      progress:mine.map((i,k)=>({bg:k<doneCount?'var(--color-accent)':'transparent'})),
+      ...(()=>{const hd=(s.holiday||{})[me];const st=hd?hd.status:'none';return {holidayNone:st==='none',holidayPending:st==='requested',isAway:st==='away',awaySince:hd&&hd.since!=null?dayName(hd.since).toLowerCase():'',awayNote:hd&&hd.note?`"${hd.note}" `:''};})(),
+      showHoliday:s.modal==='holiday',openHoliday:()=>this.setState({modal:'holiday',holidayNote:''}),holidayNote:s.holidayNote||'',setHolidayNote:e=>this.setState({holidayNote:e.target.value}),submitHoliday:()=>this.askHoliday(),withdrawHoliday:()=>this.withdrawHoliday(),comeBack:()=>this.comeBack(),
+      missed,hasMissed:missed.length>0,others:othersRows,inbox,inboxEmpty:!inbox.length,inboxCount:inbox.length?`${inbox.length} waiting`:'',chips,goFavors:go('favors'),
+      userCount:USERS.length,pending,noPending:!pending.length,pendingCountLabel:pending.length?`${pending.length} open · ${myPendingVotes} need your vote`:'',taskRows,openAdd:()=>this.openForm('add'),
+      ledgers,activity,
+      showHand:s.modal==='hand',showCant:s.modal==='cant',showForm:s.modal==='form',
+      closeModal:()=>this.setState({modal:null}),stop:e=>e.stopPropagation(),
+      handName:tgt?tgt.name:'',handValue:hv,handTargets,cantName:tgt?tgt.name:'',
+      reason:s.reason,setReason:e=>this.setState({reason:e.target.value}),reasonEmpty:!s.reason.trim(),submitCant:()=>this.submitCant(),
+      form:f,formKicker:f.kind==='edit'?'Propose an edit':'Propose a task',formTitle:f.kind==='edit'?`Change ${(this.task(f.taskId)||{}).name||''}`:'New task',
+      setName:e=>{const v=e.target.value;this.setState(st=>({form:{...st.form,name:v}}));},setN:e=>{const v=e.target.value;this.setState(st=>({form:{...st.form,n:v}}));},
+      isEvery:f.freqType==='every',
+      diffOpts:optSet([['easy','Easy · 1'],['medium','Medium · 2'],['hard','Hard · 3']],'diff'),
+      freqOpts:optSet([['daily','Daily'],['weekly','Weekly'],['every','Every X days']],'freqType'),
+      modeOpts:optSet([['rotate','Rotates'],['fixed','Always the same person']],'mode'),
+      ownerOpts:optSet(USERS.map(u=>[u.id,u.name]),'owner'),ownerLabel:f.mode==='rotate'?'Starts with':'Responsible',
+      formInvalid:!(f.name||'').trim(),submitForm:()=>this.submitForm(),
+      hasToast:!!s.toast,toast:s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>
