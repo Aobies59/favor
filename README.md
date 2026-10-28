@@ -32,7 +32,6 @@ Two containers:
    | `FAVOR_TZ` | `Europe/Madrid` | When "midnight" happens. |
    | `FAVOR_PORT` | `8080` | Host port. |
    | `FAVOR_COOKIE_SECURE` | `true` | Set when served over HTTPS. |
-   | `FAVOR_DEMO_MIDNIGHT` | `false` | `true` shows the "Skip to midnight" button. Testing only. |
 
 4. Deploy, then open `http://<server>:8080`.
 
@@ -68,7 +67,7 @@ Without Docker, start a Postgres and run:
 ```sh
 cd backend
 DATABASE_URL=postgres://favor:pw@localhost/favor \
-FAVOR_USERS='Marta:pw,Leo:pw,Inés:pw' FAVOR_DEMO_MIDNIGHT=true \
+FAVOR_ADMIN_PASSWORD=admin FAVOR_USERS='Marta:pw,Leo:pw,Inés:pw' \
 cargo run
 ```
 
@@ -80,6 +79,4 @@ cargo run
   same shape). The page also re-polls every 15 s, so other people's changes show up.
 - The rollover follows SPEC.md's "Day rollover" section. A scheduler checks
   every 30 s and catches up any midnights missed while the server was down.
-- With `FAVOR_DEMO_MIDNIGHT=true`, "Skip to midnight" moves the app's day
-  ahead of the real date. The scheduler waits until the real date catches up.
 - Sessions are HttpOnly cookies. Passwords are hashed with Argon2.

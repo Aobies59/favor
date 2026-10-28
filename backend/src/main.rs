@@ -20,7 +20,6 @@ use tower_http::{services::ServeDir, trace::TraceLayer};
 
 pub struct Config {
     pub house_name: String,
-    pub demo_midnight: bool,
     pub cookie_secure: bool,
     pub admin_password: Option<String>,
 }
@@ -66,7 +65,6 @@ async fn main() -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("FAVOR_TZ is not a valid timezone: {e}"))?;
     let config = Config {
         house_name: env_or("FAVOR_HOUSE_NAME", "Our flat"),
-        demo_midnight: env_flag("FAVOR_DEMO_MIDNIGHT"),
         cookie_secure: env_flag("FAVOR_COOKIE_SECURE"),
         admin_password: env::var("FAVOR_ADMIN_PASSWORD").ok().filter(|p| !p.trim().is_empty()),
     };
@@ -112,7 +110,6 @@ async fn main() -> anyhow::Result<()> {
         .route("/holiday/:user/decline", post(actions::decline_holiday))
         .route("/proposals", post(actions::propose))
         .route("/proposals/:id/vote", post(actions::vote))
-        .route("/midnight", post(actions::midnight))
         .route("/admin/login", post(admin::login))
         .route("/admin/logout", post(admin::logout))
         .route("/admin/users", get(admin::list).post(admin::create))

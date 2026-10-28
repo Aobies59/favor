@@ -37,8 +37,6 @@ services:
       FAVOR_HOUSE_NAME: ${FAVOR_HOUSE_NAME:-Our flat}
       # Midnight rollover runs at local midnight in this timezone.
       FAVOR_TZ: ${FAVOR_TZ:-Europe/Madrid}
-      # Shows the "Skip to midnight" demo button. Keep false in real use.
-      FAVOR_DEMO_MIDNIGHT: ${FAVOR_DEMO_MIDNIGHT:-false}
       # Set to true when serving over HTTPS (behind a reverse proxy).
       FAVOR_COOKIE_SECURE: ${FAVOR_COOKIE_SECURE:-false}
     ports:

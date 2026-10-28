@@ -49,12 +49,6 @@
         </sc-for>
       </nav>
       <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
-        <sc-if value="{{ showMidnight }}" hint-placeholder-val="{{ true }}">
-        <button class="btn btn-ghost" onClick="{{ midnight }}" title="Demo: end the day and apply penalties" style="font-size:13px;display:flex;gap:6px">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>Skip to midnight
-        </button>
-        <div style="width:1px;height:24px;background:var(--color-divider)"></div>
-        </sc-if>
         <span style="width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600">{{ meInitial }}</span>
         <span style="font-weight:500">{{ meName }}</span>
         <button class="btn btn-secondary" onClick="{{ logout }}" style="font-size:13px">Switch</button>
@@ -428,7 +422,7 @@ const remember=id=>{try{localStorage.setItem(LAST_USER,String(id));}catch(e){}};
 
 class Component extends DCLogic {
   state = {screen:'loading', loginUsers:[], house:'', pick:null, password:'',
-    me:null, date:null, demoMidnight:false, tasks:[], today:[], missed:[], bal:{}, pending:[], log:[], holiday:{},
+    me:null, date:null, tasks:[], today:[], missed:[], bal:{}, pending:[], log:[], holiday:{},
     modal:null, target:null, reason:'', holidayNote:'', form:null, toast:''};
 
   componentDidMount(){
@@ -449,7 +443,7 @@ class Component extends DCLogic {
   }
   apply(j){
     setUsers(j.users);
-    this.setState({me:j.me,date:j.today,house:j.house,demoMidnight:!!j.demoMidnight,tasks:j.tasks,today:j.items,missed:j.missed,bal:j.bal,pending:j.pending,log:j.log,holiday:j.holiday});
+    this.setState({me:j.me,date:j.today,house:j.house,tasks:j.tasks,today:j.items,missed:j.missed,bal:j.bal,pending:j.pending,log:j.log,holiday:j.holiday});
   }
   async refresh(){
     try{
@@ -517,7 +511,6 @@ class Component extends DCLogic {
   withdrawHoliday(){this.act('/holiday/withdraw');}
   decideHoliday(u,yes){this.act(`/holiday/${u}/${yes?'approve':'decline'}`,{},yes?`${NAME[u]} is off the rota. Rotating tasks moved on.`:'');}
   comeBack(){this.act('/holiday/back',{},'Welcome back. The dishes missed you.');}
-  midnight(){this.act('/midnight',{},'Midnight. Missed tasks cost favor; new tasks dealt.');}
 
   openForm(kind,t){
     const f=t?{name:t.name,diff:t.diff,freqType:t.freq.type,n:t.freq.n||3,mode:t.mode,owner:t.assignee}:{name:'',diff:'easy',freqType:'weekly',n:3,mode:'rotate',owner:this.state.me};
@@ -607,7 +600,7 @@ class Component extends DCLogic {
     return {
       ...loginVals,
       logout:()=>this.logout(),
-      tabs,meName:NAME[me]||'',meInitial:initial(NAME[me]),midnight:()=>this.midnight(),showMidnight:s.demoMidnight,
+      tabs,meName:NAME[me]||'',meInitial:initial(NAME[me]),
       isToday:s.screen==='today',isEditor:s.screen==='editor',isFavors:s.screen==='favors',isActivity:s.screen==='activity',
       dateLabel,todaySub,myTasks,noTasks:!myTasks.length&&hst!=='away',doneCount,totalCount:mine.length,
       progress:mine.map((i,k)=>({bg:k<doneCount?'var(--color-accent)':'transparent'})),

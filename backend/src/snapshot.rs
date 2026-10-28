@@ -154,7 +154,6 @@ pub async fn build(c: &mut PgConnection, state: &AppState, me: i32) -> AppResult
 
     Ok(json!({
         "house": state.config.house_name,
-        "demoMidnight": state.config.demo_midnight,
         "me": me,
         "today": today,
         "users": house.users.iter().map(|u| json!({ "id": u.id, "name": u.name })).collect::<Vec<_>>(),

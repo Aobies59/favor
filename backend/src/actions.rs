@@ -13,7 +13,7 @@ use crate::{
     auth::Me,
     error::{AppError, AppResult},
     model::{self, Household, Instance, Task, TaskData, UNRESOLVED},
-    rollover, snapshot, AppState,
+    snapshot, AppState,
 };
 
 type Tx = Transaction<'static, Postgres>;
@@ -618,13 +618,3 @@ pub async fn apply_if_unanimous(c: &mut PgConnection, id: i32, house: &Household
     Ok(())
 }
 
-// ── Demo ────────────────────────────────────────────────────────────────
-
-pub async fn midnight(State(st): State<AppState>, Me(me): Me) -> Reply {
-    if !st.config.demo_midnight {
-        return Err(AppError::forbidden("Midnight comes when it comes."));
-    }
-    let mut tx = begin(&st).await?;
-    rollover::rollover(&mut tx).await?;
-    finish(tx, &st, me).await
-}
