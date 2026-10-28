@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="styles.css">
 <style>body{margin:0;background:#f2f2f3}a{color:#416180}a:hover{color:#2c455d}</style>
 </helmet>
-<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);background-image:linear-gradient(var(--color-divider) 1px,transparent 1px),linear-gradient(90deg,var(--color-divider) 1px,transparent 1px);background-size:80px 80px;background-position:-1px -1px">
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);background-image:linear-gradient(color-mix(in oklch,var(--color-divider) 35%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in oklch,var(--color-divider) 35%,transparent) 1px,transparent 1px);background-size:80px 80px;background-position:-1px -1px">
 
 <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
   <div style="min-height:100vh;display:grid;place-items:center;padding:40px">
@@ -404,7 +404,7 @@
         <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">Log out</div>
         <div class="dialog-title" style="font-size:28px">Leaving already, {{ meName }}?</div>
         <div class="dialog-body">Your tasks will still be here when you log back in. Unfortunately.</div>
-        <div class="dialog-actions"><button class="btn btn-ghost" onClick="{{ closeModal }}">Stay</button><button class="btn btn-primary" onClick="{{ logout }}">Log out</button></div>
+        <div class="dialog-actions" style="display:flex;gap:12px"><button class="btn btn-secondary" onClick="{{ closeModal }}" style="flex:1;padding:12px 20px;font-size:16px">Stay</button><button class="btn btn-primary" onClick="{{ logout }}" style="flex:1;padding:12px 20px;font-size:16px">Log out</button></div>
       </div>
     </div>
   </sc-if>
