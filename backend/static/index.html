@@ -33,6 +33,12 @@
       </div>
       <div class="field"><label>Password</label><input class="input" type="password" autocomplete="current-password" value="{{ password }}" onChange="{{ setPassword }}" onKeyDown="{{ loginKey }}"></div>
       <button class="btn btn-primary blueprint" onClick="{{ signIn }}" disabled="{{ cantSignIn }}" style="padding:12px;font-size:16px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Sign in as {{ loginName }}</button>
+      <sc-if value="{{ hasSession }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onClick="{{ cancelSwitch }}">Cancel, stay as {{ sessionName }}</button>
+          <button class="btn btn-ghost" onClick="{{ signOut }}">Sign out {{ sessionName }}</button>
+        </div>
+      </sc-if>
     </div>
   </div>
 </sc-if>
@@ -51,7 +57,7 @@
       <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
         <span style="width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600">{{ meInitial }}</span>
         <span style="font-weight:500">{{ meName }}</span>
-        <button class="btn btn-secondary" onClick="{{ logout }}" style="font-size:13px">Switch</button>
+        <button class="btn btn-secondary" onClick="{{ switchUser }}" title="Sign in as someone else" style="font-size:13px">Switch</button>
       </div>
     </div>
   </header>
@@ -448,7 +454,7 @@ class Component extends DCLogic {
   async refresh(){
     try{
       const {r,j}=await this.call('/state');
-      if(r.status===401){this.setState({screen:'login'});return;}
+      if(r.status===401){this.setState({screen:'login',me:null});return;}
       if(!r.ok)return;
       this.apply(j);
       if(this.state.screen==='loading'||this.state.screen==='login')this.setState({screen:'today'});
@@ -466,7 +472,7 @@ class Component extends DCLogic {
   async act(path,body,ok){
     try{
       const {r,j}=await this.call(path,body||{});
-      if(r.status===401){this.setState({screen:'login',modal:null});this.flash('Signed out. Sign in again.');return false;}
+      if(r.status===401){this.setState({screen:'login',me:null,modal:null});this.flash('Signed out. Sign in again.');return false;}
       if(!r.ok){this.flash(j.error||'That didn\'t work.');this.refresh();return false;}
       this.apply(j);
       if(ok)this.flash(ok);
@@ -487,9 +493,19 @@ class Component extends DCLogic {
       this.setState({screen:'today'});
     }catch(e){this.flash('Can\'t reach the server.');}
   }
-  async logout(){
+  // Switch opens the login screen but keeps the current session, so Cancel
+  // can go straight back. Signing in as someone else replaces it.
+  switchUser(){
+    this.setState(s=>({screen:'login',backTo:s.screen,pick:s.me,password:'',modal:null}));
+    this.loadUsers();
+  }
+  cancelSwitch(){
+    this.setState(s=>({screen:s.backTo||'today',password:''}));
+    this.refresh();
+  }
+  async signOut(){
     try{await this.call('/logout',{});}catch(e){}
-    this.setState({screen:'login',pick:this.state.me,password:'',modal:null});
+    this.setState(s=>({screen:'login',me:null,pick:s.me,password:'',modal:null}));
     this.loadUsers();
   }
 
@@ -531,7 +547,8 @@ class Component extends DCLogic {
       isLogin:s.screen==='login',isApp:s.screen!=='login'&&s.screen!=='loading'&&me!=null,houseName:s.house||'Our flat',
       loginUsers:s.loginUsers.map(u=>({name:u.name,initial:initial(u.name),bg:s.pick===u.id?'var(--color-accent-100)':'transparent',border:s.pick===u.id?'var(--color-accent)':'var(--color-divider)',pick:()=>this.setState({pick:u.id})})),
       loginName:(s.loginUsers.find(u=>u.id===s.pick)||{}).name||'…',password:s.password,setPassword:e=>this.setState({password:e.target.value}),
-      loginKey:e=>{if(e.key==='Enter')this.signIn();},cantSignIn:s.pick==null||!s.password,signIn:()=>this.signIn(),
+      loginKey:e=>{if(e.key==='Enter')this.signIn();if(e.key==='Escape'&&me!=null)this.cancelSwitch();},
+      hasSession:me!=null&&!!NAME[me],sessionName:NAME[me]||'',cancelSwitch:()=>this.cancelSwitch(),signOut:()=>this.signOut(),cantSignIn:s.pick==null||!s.password,signIn:()=>this.signIn(),
       hasToast:!!s.toast,toast:s.toast,
     };
     if(!loginVals.isApp||!s.date)return {...loginVals,isApp:false};
@@ -599,7 +616,7 @@ class Component extends DCLogic {
     const hd=(s.holiday||{})[me];const hst=hd?hd.status:'none';
     return {
       ...loginVals,
-      logout:()=>this.logout(),
+      switchUser:()=>this.switchUser(),
       tabs,meName:NAME[me]||'',meInitial:initial(NAME[me]),
       isToday:s.screen==='today',isEditor:s.screen==='editor',isFavors:s.screen==='favors',isActivity:s.screen==='activity',
       dateLabel,todaySub,myTasks,noTasks:!myTasks.length&&hst!=='away',doneCount,totalCount:mine.length,

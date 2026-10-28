@@ -136,7 +136,11 @@ pub struct LoginBody {
     password: String,
 }
 
-pub async fn login(State(state): State<AppState>, Json(body): Json<LoginBody>) -> Result<Response, AppError> {
+pub async fn login(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<LoginBody>,
+) -> Result<Response, AppError> {
     let row: Option<(String,)> = sqlx::query_as("SELECT password_hash FROM users WHERE id = $1")
         .bind(body.user_id)
         .fetch_optional(&state.pool)
@@ -144,6 +148,10 @@ pub async fn login(State(state): State<AppState>, Json(body): Json<LoginBody>) -
     let ok = row.is_some_and(|(hash,)| verify_password(&body.password, &hash));
     if !ok {
         return Err(AppError::forbidden("Wrong password. Nice try."));
+    }
+    // Switching user replaces the old session rather than leaving it behind.
+    if let Some(old) = session_token(&headers) {
+        sqlx::query("DELETE FROM sessions WHERE token = $1").bind(old).execute(&state.pool).await?;
     }
     let token = new_token();
     sqlx::query("INSERT INTO sessions (token, user_id) VALUES ($1, $2)")
