@@ -572,9 +572,10 @@ pub async fn apply_if_unanimous(c: &mut PgConnection, id: i32, house: &Household
 
     match (p.kind.as_str(), data, p.task_id) {
         ("add", Some(d), _) => {
-            sqlx::query(
+            // Due today: the first card is dealt right away and counts like any other.
+            let (task_id,): (i32,) = sqlx::query_as(
                 "INSERT INTO tasks (name, difficulty, freq_type, freq_n, mode, assignee_id, due_in_days)
-                 VALUES ($1, $2, $3, $4, $5, $6, 1)",
+                 VALUES ($1, $2, $3, $4, $5, $6, 0) RETURNING id",
             )
             .bind(&d.name)
             .bind(&d.diff)
@@ -582,8 +583,21 @@ pub async fn apply_if_unanimous(c: &mut PgConnection, id: i32, house: &Household
             .bind(d.freq_n())
             .bind(&d.mode)
             .bind(d.owner)
-            .execute(&mut *c)
+            .fetch_one(&mut *c)
             .await?;
+            let mut t = model::task(c, task_id).await?;
+            if t.rotates() && house.away.contains(&t.assignee_id) {
+                t.assignee_id = house.next_user(t.assignee_id);
+                sqlx::query("UPDATE tasks SET assignee_id = $2 WHERE id = $1")
+                    .bind(t.id)
+                    .bind(t.assignee_id)
+                    .execute(&mut *c)
+                    .await?;
+            }
+            // A fixed task whose owner is away waits; "I'm back" deals it.
+            if !house.away.contains(&t.assignee_id) {
+                model::create_instance(c, &t, t.assignee_id, day).await?;
+            }
         }
         ("edit", Some(d), Some(task_id)) => {
             sqlx::query(
