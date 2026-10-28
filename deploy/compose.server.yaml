@@ -1,0 +1,44 @@
+# Server compose file: deploy/deploy.sh copies it to the server as compose.yaml.
+# Same stack as docker-compose.yml, but the image is built on the server and
+# backend/static is bind-mounted, so page-only changes go live with an rsync.
+# The .env next to it is created by hand on the server (see deploy/deploy.sh).
+name: favor
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: favor
+      POSTGRES_USER: favor
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes:
+      - favor-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U favor -d favor"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    image: favor:latest
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://favor:${DB_PASSWORD}@db:5432/favor
+      FAVOR_ADMIN_PASSWORD: ${FAVOR_ADMIN_PASSWORD:?Set FAVOR_ADMIN_PASSWORD}
+      FAVOR_USERS: ${FAVOR_USERS:-}
+      FAVOR_HOUSE_NAME: ${FAVOR_HOUSE_NAME:-Our flat}
+      FAVOR_TZ: ${FAVOR_TZ:-Europe/Madrid}
+      FAVOR_COOKIE_SECURE: ${FAVOR_COOKIE_SECURE:-false}
+    volumes:
+      - ./backend/static:/app/static:ro
+    ports:
+      # Port 8080 on the server belongs to qBittorrent; deploy.sh checks 3018.
+      - "3018:8080"
+
+volumes:
+  favor-db:
