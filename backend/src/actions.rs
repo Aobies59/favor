@@ -571,53 +571,9 @@ pub async fn apply_if_unanimous(c: &mut PgConnection, id: i32, house: &Household
     let data: Option<TaskData> = p.data_json.clone().and_then(|d| serde_json::from_value(d).ok());
 
     match (p.kind.as_str(), data, p.task_id) {
-        ("add", Some(d), _) => {
-            // Due today: the first card is dealt right away and counts like any other.
-            let (task_id,): (i32,) = sqlx::query_as(
-                "INSERT INTO tasks (name, difficulty, freq_type, freq_n, mode, assignee_id, due_in_days)
-                 VALUES ($1, $2, $3, $4, $5, $6, 0) RETURNING id",
-            )
-            .bind(&d.name)
-            .bind(&d.diff)
-            .bind(&d.freq.kind)
-            .bind(d.freq_n())
-            .bind(&d.mode)
-            .bind(d.owner)
-            .fetch_one(&mut *c)
-            .await?;
-            let mut t = model::task(c, task_id).await?;
-            if t.rotates() && house.away.contains(&t.assignee_id) {
-                t.assignee_id = house.next_user(t.assignee_id);
-                sqlx::query("UPDATE tasks SET assignee_id = $2 WHERE id = $1")
-                    .bind(t.id)
-                    .bind(t.assignee_id)
-                    .execute(&mut *c)
-                    .await?;
-            }
-            // A fixed task whose owner is away waits; "I'm back" deals it.
-            if !house.away.contains(&t.assignee_id) {
-                model::create_instance(c, &t, t.assignee_id, day).await?;
-            }
-        }
-        ("edit", Some(d), Some(task_id)) => {
-            sqlx::query(
-                "UPDATE tasks SET name = $2, difficulty = $3, freq_type = $4, freq_n = $5, mode = $6, assignee_id = $7
-                 WHERE id = $1",
-            )
-            .bind(task_id)
-            .bind(&d.name)
-            .bind(&d.diff)
-            .bind(&d.freq.kind)
-            .bind(d.freq_n())
-            .bind(&d.mode)
-            .bind(d.owner)
-            .execute(&mut *c)
-            .await?;
-        }
-        ("delete", _, Some(task_id)) => {
-            // Cascades to today's instances and to this proposal.
-            sqlx::query("DELETE FROM tasks WHERE id = $1").bind(task_id).execute(&mut *c).await?;
-        }
+        ("add", Some(d), _) => create_task(c, &d, house, day).await?,
+        ("edit", Some(d), Some(task_id)) => update_task(c, task_id, &d).await?,
+        ("delete", _, Some(task_id)) => delete_task(c, task_id).await?,
         _ => return Err(anyhow::anyhow!("proposal {id} is malformed").into()),
     }
     sqlx::query("DELETE FROM proposals WHERE id = $1").bind(id).execute(&mut *c).await?;
@@ -632,3 +588,59 @@ pub async fn apply_if_unanimous(c: &mut PgConnection, id: i32, house: &Household
     Ok(())
 }
 
+
+// ── Applying task changes (after a unanimous vote, or from the admin page) ──
+
+/// Creates a task due today and deals its first card right away; it counts
+/// like any other.
+pub async fn create_task(c: &mut PgConnection, d: &TaskData, house: &Household, day: chrono::NaiveDate) -> AppResult<()> {
+    let (task_id,): (i32,) = sqlx::query_as(
+        "INSERT INTO tasks (name, difficulty, freq_type, freq_n, mode, assignee_id, due_in_days)
+         VALUES ($1, $2, $3, $4, $5, $6, 0) RETURNING id",
+    )
+    .bind(&d.name)
+    .bind(&d.diff)
+    .bind(&d.freq.kind)
+    .bind(d.freq_n())
+    .bind(&d.mode)
+    .bind(d.owner)
+    .fetch_one(&mut *c)
+    .await?;
+    let mut t = model::task(c, task_id).await?;
+    if t.rotates() && house.away.contains(&t.assignee_id) {
+        t.assignee_id = house.next_user(t.assignee_id);
+        sqlx::query("UPDATE tasks SET assignee_id = $2 WHERE id = $1")
+            .bind(t.id)
+            .bind(t.assignee_id)
+            .execute(&mut *c)
+            .await?;
+    }
+    // A fixed task whose owner is away waits; "I'm back" deals it.
+    if !house.away.contains(&t.assignee_id) {
+        model::create_instance(c, &t, t.assignee_id, day).await?;
+    }
+    Ok(())
+}
+
+pub async fn update_task(c: &mut PgConnection, task_id: i32, d: &TaskData) -> AppResult<()> {
+    sqlx::query(
+        "UPDATE tasks SET name = $2, difficulty = $3, freq_type = $4, freq_n = $5, mode = $6, assignee_id = $7
+         WHERE id = $1",
+    )
+    .bind(task_id)
+    .bind(&d.name)
+    .bind(&d.diff)
+    .bind(&d.freq.kind)
+    .bind(d.freq_n())
+    .bind(&d.mode)
+    .bind(d.owner)
+    .execute(c)
+    .await?;
+    Ok(())
+}
+
+/// Removes a task; cascades to today's card and any proposals about it.
+pub async fn delete_task(c: &mut PgConnection, task_id: i32) -> AppResult<()> {
+    sqlx::query("DELETE FROM tasks WHERE id = $1").bind(task_id).execute(c).await?;
+    Ok(())
+}

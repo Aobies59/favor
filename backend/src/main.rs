@@ -115,7 +115,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/admin/users", get(admin::list).post(admin::create))
         .route("/admin/users/:id", post(admin::update))
         .route("/admin/users/:id/move", post(admin::reorder))
-        .route("/admin/users/:id/delete", post(admin::remove));
+        .route("/admin/users/:id/delete", post(admin::remove))
+        .route("/admin/tasks", get(admin::tasks).post(admin::create_task))
+        .route("/admin/tasks/:id", post(admin::update_task))
+        .route("/admin/tasks/:id/delete", post(admin::delete_task));
 
     let app = Router::new()
         .route("/healthz", get(|| async { "ok" }))

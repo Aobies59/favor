@@ -17,12 +17,17 @@
   .meta { font-size: 12px; color: var(--color-neutral-600); margin-top: 4px; }
   .add { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; }
   #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 30; background: var(--color-accent-900); color: var(--color-bg); padding: 12px 20px; font-size: 14px; box-shadow: var(--shadow-lg); display: none; max-width: calc(100% - 32px); }
+  .task-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .task-form .wide { grid-column: 1 / -1; }
+  .task-form .buttons { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
+  .scroll { overflow-x: auto; }
+  select.input { appearance: auto; }
   [hidden] { display: none !important; }
   @media (max-width: 640px) {
     .row { grid-template-columns: auto minmax(0, 1fr); }
     .row > .name, .row > .pw { grid-column: 2; }
     .row > .actions { grid-column: 1 / -1; }
-    .add { grid-template-columns: 1fr; }
+    .add, .task-form { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -68,6 +73,45 @@
         <div class="field"><label for="add-name">Name</label><input class="input" id="add-name" maxlength="40" required></div>
         <div class="field"><label for="add-pw">Password</label><input class="input" id="add-pw" type="password" autocomplete="new-password" minlength="4" required></div>
         <button class="btn btn-primary" type="submit">Add</button>
+      </form>
+    </div>
+
+    <div>
+      <div class="kicker">House rules</div>
+      <h1 style="margin:0">Tasks</h1>
+      <p style="margin:6px 0 0;color:var(--color-neutral-700)">Changes here apply straight away, without a house vote, and show up in everyone's Activity. New tasks start today.</p>
+    </div>
+
+    <div class="panel blueprint">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="scroll">
+        <table class="table">
+          <thead><tr><th>Task</th><th>Difficulty</th><th>Frequency</th><th>Assignment</th><th></th></tr></thead>
+          <tbody id="tasks"></tbody>
+        </table>
+      </div>
+      <div id="no-tasks" hidden style="padding:20px;border:1px dashed var(--color-divider);color:var(--color-neutral-700)">No tasks yet. Add the first one below.</div>
+    </div>
+
+    <div class="panel blueprint">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3 style="margin:0" id="task-form-title">Add a task</h3>
+      <form id="task-form" class="task-form">
+        <div class="field wide"><label for="t-name">Name</label><input class="input" id="t-name" maxlength="80" required placeholder="e.g. Descale the kettle"></div>
+        <div class="field"><label for="t-diff">Difficulty</label>
+          <select class="input" id="t-diff"><option value="easy">Easy · 1</option><option value="medium">Medium · 2</option><option value="hard">Hard · 3</option></select></div>
+        <div class="field"><label for="t-freq">Frequency</label>
+          <div class="inline">
+            <select class="input" id="t-freq"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="every">Every X days</option></select>
+            <input class="input" id="t-n" type="number" min="2" max="365" value="3" style="width:90px" hidden aria-label="Every how many days">
+          </div></div>
+        <div class="field"><label for="t-mode">Assignment</label>
+          <select class="input" id="t-mode"><option value="rotate">Rotates</option><option value="fixed">Always the same person</option></select></div>
+        <div class="field"><label for="t-owner" id="t-owner-label">Starts with</label><select class="input" id="t-owner"></select></div>
+        <div class="buttons">
+          <button class="btn btn-ghost" type="button" id="t-cancel" hidden>Cancel</button>
+          <button class="btn btn-primary" type="submit" id="t-submit">Add task</button>
+        </div>
       </form>
     </div>
   </section>
@@ -117,6 +161,7 @@ function el(tag, props = {}, ...kids) {
 function render(data) {
   if (!data) return;
   show('manage');
+  loadTasks();
   const list = $('users');
   list.replaceChildren();
   $('empty').hidden = data.users.length > 0;
@@ -159,6 +204,98 @@ function render(data) {
     ));
   });
 }
+
+// ── Tasks ──
+const DIFF = { easy: 'Easy · 1', medium: 'Medium · 2', hard: 'Hard · 3' };
+const freqLabel = f => f.type === 'daily' ? 'Daily' : f.type === 'weekly' ? 'Weekly' : `Every ${f.n} days`;
+let taskUsers = [];
+let editing = null;
+
+function syncFormBits() {
+  $('t-n').hidden = $('t-freq').value !== 'every';
+  $('t-owner-label').textContent = $('t-mode').value === 'rotate' ? 'Starts with' : 'Responsible';
+}
+$('t-freq').onchange = syncFormBits;
+$('t-mode').onchange = syncFormBits;
+
+function resetTaskForm() {
+  editing = null;
+  $('task-form').reset();
+  $('t-n').value = 3;
+  if (taskUsers.length) $('t-owner').value = taskUsers[0].id;
+  $('task-form-title').textContent = 'Add a task';
+  $('t-submit').textContent = 'Add task';
+  $('t-cancel').hidden = true;
+  syncFormBits();
+}
+$('t-cancel').onclick = resetTaskForm;
+
+function editTask(t) {
+  editing = t;
+  $('t-name').value = t.name;
+  $('t-diff').value = t.diff;
+  $('t-freq').value = t.freq.type;
+  $('t-n').value = t.freq.n || 3;
+  $('t-mode').value = t.mode;
+  $('t-owner').value = t.owner;
+  $('task-form-title').textContent = `Edit ${t.name}`;
+  $('t-submit').textContent = 'Save changes';
+  $('t-cancel').hidden = false;
+  syncFormBits();
+  $('task-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  $('t-name').focus();
+}
+
+function renderTasks(data) {
+  if (!data) return;
+  taskUsers = data.users;
+  const owner = $('t-owner'), keep = owner.value;
+  owner.replaceChildren(...data.users.map(u => el('option', { value: u.id, textContent: u.name })));
+  owner.value = data.users.some(u => String(u.id) === keep) ? keep : (data.users[0] || {}).id ?? '';
+  const name = id => (data.users.find(u => u.id === id) || {}).name || '?';
+  $('no-tasks').hidden = data.tasks.length > 0;
+  $('tasks').replaceChildren(...data.tasks.map(t => {
+    const edit = el('button', { className: 'btn btn-ghost', type: 'button', textContent: 'Edit' });
+    const del = el('button', { className: 'btn btn-ghost', type: 'button', textContent: 'Delete' });
+    edit.onclick = () => editTask(t);
+    del.onclick = async () => {
+      if (!confirm(`Delete ${t.name}? Today's card for it goes too. This can't be undone.`)) return;
+      const d = await call(`/tasks/${t.id}/delete`, {});
+      if (d) { toast(`${t.name} is gone.`); if (editing && editing.id === t.id) resetTaskForm(); renderTasks(d); }
+    };
+    const title = el('td', { style: 'font-weight:500' }, t.name);
+    if (t.votePending) title.append(' ', el('span', { className: 'tag tag-outline', style: 'font-size:10px', textContent: 'Vote pending' }));
+    const assignment = t.mode === 'rotate' ? `Rotates · up: ${name(t.owner)}` : `Always ${name(t.owner)}`;
+    return el('tr', {},
+      title,
+      el('td', { textContent: DIFF[t.diff] }),
+      el('td', { textContent: freqLabel(t.freq) }),
+      el('td', { textContent: assignment }),
+      el('td', { style: 'text-align:right;white-space:nowrap' }, edit, del));
+  }));
+  if (!editing) syncFormBits();
+}
+
+$('task-form').onsubmit = async e => {
+  e.preventDefault();
+  const type = $('t-freq').value;
+  const data = {
+    name: $('t-name').value.trim(),
+    diff: $('t-diff').value,
+    freq: type === 'every' ? { type, n: Math.max(2, +$('t-n').value || 2) } : { type },
+    mode: $('t-mode').value,
+    owner: +$('t-owner').value,
+  };
+  if (!data.name) return;
+  if (editing && editing.votePending && !confirm(`A vote is pending on ${editing.name}. Saving drops that proposal. Continue?`)) return;
+  const d = editing ? await call(`/tasks/${editing.id}`, data) : await call('/tasks', data);
+  if (!d) return;
+  toast(editing ? `${data.name} updated.` : `${data.name} added. It starts today.`);
+  resetTaskForm();
+  renderTasks(d);
+};
+
+const loadTasks = async () => renderTasks(await call('/tasks'));
 
 $('login-form').onsubmit = async e => {
   e.preventDefault();

@@ -291,3 +291,94 @@ pub async fn remove(State(st): State<AppState>, _: Admin, Path(id): Path<i32>) -
     tx.commit().await?;
     Ok(Json(out))
 }
+
+// ── Tasks: changed directly, without a house vote ───────────────────────
+
+pub async fn tasks(State(st): State<AppState>, _: Admin) -> AppResult<Json<Value>> {
+    let mut c = st.pool.acquire().await?;
+    tasks_json(&mut c).await.map(Json)
+}
+
+async fn tasks_json(c: &mut sqlx::PgConnection) -> AppResult<Value> {
+    let house = model::household(c).await?;
+    let pending: Vec<(i32,)> = sqlx::query_as("SELECT task_id FROM proposals WHERE task_id IS NOT NULL")
+        .fetch_all(&mut *c)
+        .await?;
+    let tasks: Vec<Value> = model::tasks(c)
+        .await?
+        .iter()
+        .map(|t| {
+            let mut v = serde_json::to_value(model::TaskData::from_task(t)).expect("TaskData serialises");
+            v["id"] = json!(t.id);
+            v["due"] = json!(t.due_in_days);
+            v["votePending"] = json!(pending.iter().any(|(id,)| *id == t.id));
+            v
+        })
+        .collect();
+    Ok(json!({
+        "tasks": tasks,
+        "users": house.users.iter().map(|u| json!({ "id": u.id, "name": u.name })).collect::<Vec<_>>(),
+    }))
+}
+
+pub async fn create_task(
+    State(st): State<AppState>,
+    _: Admin,
+    Json(data): Json<model::TaskData>,
+) -> AppResult<Json<Value>> {
+    let mut tx = st.pool.begin().await?;
+    model::lock(&mut tx).await?;
+    let house = model::household(&mut tx).await?;
+    let day = model::today(&mut tx).await?;
+    let d = data.validated(&house)?;
+    actions::create_task(&mut tx, &d, &house, day).await?;
+    let text = format!("Admin added a task: {}", d.name);
+    model::log(&mut tx, day, "vote", text, None, &house.all_ids(), None).await?;
+    let out = tasks_json(&mut tx).await?;
+    tx.commit().await?;
+    Ok(Json(out))
+}
+
+/// Edits a task directly. Any vote pending on it is dropped, since applying
+/// it later would undo this edit with stale values.
+pub async fn update_task(
+    State(st): State<AppState>,
+    _: Admin,
+    Path(id): Path<i32>,
+    Json(data): Json<model::TaskData>,
+) -> AppResult<Json<Value>> {
+    let mut tx = st.pool.begin().await?;
+    model::lock(&mut tx).await?;
+    let house = model::household(&mut tx).await?;
+    let day = model::today(&mut tx).await?;
+    let old = model::task(&mut tx, id).await?;
+    let d = data.validated(&house)?;
+    if d == model::TaskData::from_task(&old) {
+        return Err(AppError::bad("Nothing changed."));
+    }
+    sqlx::query("DELETE FROM proposals WHERE task_id = $1").bind(id).execute(&mut *tx).await?;
+    actions::update_task(&mut tx, id, &d).await?;
+    let text = if d.name == old.name {
+        format!("Admin changed {}", old.name)
+    } else {
+        format!("Admin changed {} (now {})", old.name, d.name)
+    };
+    model::log(&mut tx, day, "vote", text, None, &house.all_ids(), None).await?;
+    let out = tasks_json(&mut tx).await?;
+    tx.commit().await?;
+    Ok(Json(out))
+}
+
+pub async fn delete_task(State(st): State<AppState>, _: Admin, Path(id): Path<i32>) -> AppResult<Json<Value>> {
+    let mut tx = st.pool.begin().await?;
+    model::lock(&mut tx).await?;
+    let house = model::household(&mut tx).await?;
+    let day = model::today(&mut tx).await?;
+    let t = model::task(&mut tx, id).await?;
+    actions::delete_task(&mut tx, id).await?;
+    let text = format!("Admin removed {}", t.name);
+    model::log(&mut tx, day, "vote", text, None, &house.all_ids(), None).await?;
+    let out = tasks_json(&mut tx).await?;
+    tx.commit().await?;
+    Ok(Json(out))
+}
