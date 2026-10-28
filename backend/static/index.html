@@ -33,12 +33,6 @@
       </div>
       <div class="field"><label>Password</label><input class="input" type="password" autocomplete="current-password" value="{{ password }}" onChange="{{ setPassword }}" onKeyDown="{{ loginKey }}"></div>
       <button class="btn btn-primary blueprint" onClick="{{ signIn }}" disabled="{{ cantSignIn }}" style="padding:12px;font-size:16px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Sign in as {{ loginName }}</button>
-      <sc-if value="{{ hasSession }}" hint-placeholder-val="{{ false }}">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-          <button class="btn btn-secondary" onClick="{{ cancelSwitch }}">Cancel, stay as {{ sessionName }}</button>
-          <button class="btn btn-ghost" onClick="{{ signOut }}">Sign out {{ sessionName }}</button>
-        </div>
-      </sc-if>
     </div>
   </div>
 </sc-if>
@@ -57,7 +51,7 @@
       <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
         <span style="width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600">{{ meInitial }}</span>
         <span style="font-weight:500">{{ meName }}</span>
-        <button class="btn btn-secondary" onClick="{{ switchUser }}" title="Sign in as someone else" style="font-size:13px">Switch</button>
+        <button class="btn btn-secondary" onClick="{{ openLogout }}" style="font-size:13px;display:flex;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg>Log out</button>
       </div>
     </div>
   </header>
@@ -403,6 +397,18 @@
   </sc-if>
 
 </sc-if>
+  <sc-if value="{{ showLogout }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" onClick="{{ closeModal }}" style="z-index:20">
+      <div class="dialog blueprint" onClick="{{ stop }}" style="background:var(--color-bg);width:min(420px,100%)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">Log out</div>
+        <div class="dialog-title" style="font-size:28px">Leaving already, {{ meName }}?</div>
+        <div class="dialog-body">Your tasks will still be here when you log back in. Unfortunately.</div>
+        <div class="dialog-actions"><button class="btn btn-ghost" onClick="{{ closeModal }}">Stay</button><button class="btn btn-primary" onClick="{{ logout }}">Log out</button></div>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:30;background:var(--color-accent-900);color:var(--color-bg);padding:12px 20px;font-size:14px;box-shadow:var(--shadow-lg)">{{ toast }}</div>
   </sc-if>
@@ -493,17 +499,7 @@ class Component extends DCLogic {
       this.setState({screen:'today'});
     }catch(e){this.flash('Can\'t reach the server.');}
   }
-  // Switch opens the login screen but keeps the current session, so Cancel
-  // can go straight back. Signing in as someone else replaces it.
-  switchUser(){
-    this.setState(s=>({screen:'login',backTo:s.screen,pick:s.me,password:'',modal:null}));
-    this.loadUsers();
-  }
-  cancelSwitch(){
-    this.setState(s=>({screen:s.backTo||'today',password:''}));
-    this.refresh();
-  }
-  async signOut(){
+  async logout(){
     try{await this.call('/logout',{});}catch(e){}
     this.setState(s=>({screen:'login',me:null,pick:s.me,password:'',modal:null}));
     this.loadUsers();
@@ -547,8 +543,7 @@ class Component extends DCLogic {
       isLogin:s.screen==='login',isApp:s.screen!=='login'&&s.screen!=='loading'&&me!=null,houseName:s.house||'Our flat',
       loginUsers:s.loginUsers.map(u=>({name:u.name,initial:initial(u.name),bg:s.pick===u.id?'var(--color-accent-100)':'transparent',border:s.pick===u.id?'var(--color-accent)':'var(--color-divider)',pick:()=>this.setState({pick:u.id})})),
       loginName:(s.loginUsers.find(u=>u.id===s.pick)||{}).name||'…',password:s.password,setPassword:e=>this.setState({password:e.target.value}),
-      loginKey:e=>{if(e.key==='Enter')this.signIn();if(e.key==='Escape'&&me!=null)this.cancelSwitch();},
-      hasSession:me!=null&&!!NAME[me],sessionName:NAME[me]||'',cancelSwitch:()=>this.cancelSwitch(),signOut:()=>this.signOut(),cantSignIn:s.pick==null||!s.password,signIn:()=>this.signIn(),
+      loginKey:e=>{if(e.key==='Enter')this.signIn();},cantSignIn:s.pick==null||!s.password,signIn:()=>this.signIn(),
       hasToast:!!s.toast,toast:s.toast,
     };
     if(!loginVals.isApp||!s.date)return {...loginVals,isApp:false};
@@ -616,7 +611,7 @@ class Component extends DCLogic {
     const hd=(s.holiday||{})[me];const hst=hd?hd.status:'none';
     return {
       ...loginVals,
-      switchUser:()=>this.switchUser(),
+      openLogout:()=>this.setState({modal:'logout'}),showLogout:s.modal==='logout',logout:()=>this.logout(),
       tabs,meName:NAME[me]||'',meInitial:initial(NAME[me]),
       isToday:s.screen==='today',isEditor:s.screen==='editor',isFavors:s.screen==='favors',isActivity:s.screen==='activity',
       dateLabel,todaySub,myTasks,noTasks:!myTasks.length&&hst!=='away',doneCount,totalCount:mine.length,

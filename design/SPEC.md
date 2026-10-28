@@ -33,14 +33,16 @@ A task due on a given day creates an **instance**: `{taskId, assignee, status, h
 ## Screens
 
 ### Login
-- Pick your account, enter password, sign in.
-- "Switch" in the header logs out.
+- Pick your account, enter password, sign in (Enter also signs in).
+- "Switch" in the header opens this screen but **keeps you signed in**. While a session exists it also shows:
+  - **Cancel, stay as {name}** (or Esc): back to the tab you were on, no password needed.
+  - **Sign out {name}**: ends the session.
+- Signing in as someone else replaces the current session.
 
 ### Header (all app screens)
 - Tabs: Today, Editor, Favors, Activity.
 - Badges: Today shows the count of items in "Needs you". Editor shows the count of proposals you haven't voted on.
-- Current user and a Switch/logout button.
-- Demo only: "Skip to midnight" triggers the day rollover. In production this runs on a scheduler at local midnight.
+- Current user and a Switch button (see Login).
 
 ### Today
 **Header:** date, "Your tasks, {name}", progress (done+excused / total). The subtitle reads "{n} to go. Skip them and you lose up to {sum of values} favor with each roommate."
@@ -110,7 +112,7 @@ If there's nothing, show an empty state.
 ### Activity
 A reverse-chronological log of everything: done, asks, accepts and declines, spends, can't-do requests and decisions, misses, refunds, votes, holiday events. Each entry has a day label (Today / Yesterday / date), the text, and an optional delta.
 
-## Day rollover (runs at midnight)
+## Day rollover (runs at local midnight, on a server scheduler)
 For every task:
 1. **No instance today:** `due = max(0, due - 1)`.
 2. **Weekly instance with `daysLeft > 1`:** carry it over with `daysLeft - 1`, keeping its status.
@@ -121,6 +123,9 @@ For every task:
 4. Create new instances for tasks with `due == 0` whose assignee isn't away and that have no carried-over instance. Weekly instances start with `daysLeft = 7`.
 
 Holiday users are never penalised; their instances were reassigned or excused on approval.
+
+## Accounts (admin page, not part of this design)
+Roommate accounts are managed at `/admin`, signed in with the server's admin password: add, rename, set a new password (signs them out everywhere), reorder (the list order is the rotation order), and remove (their tasks pass to the next person in the rotation).
 
 ## Suggested data model
 - `users(id, name, password_hash)`

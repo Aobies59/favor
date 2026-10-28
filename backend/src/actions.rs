@@ -1,5 +1,5 @@
 //! Every write the app can make. Each handler runs in one locked
-//! transaction, checks the rules from SPEC.md, and answers with a snapshot.
+//! transaction, checks the house rules, and answers with a snapshot.
 
 use axum::{
     extract::{Path, State},

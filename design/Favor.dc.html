@@ -19,11 +19,11 @@
     <div class="blueprint" style="width:min(520px,100%);background:var(--color-bg);padding:40px;display:flex;flex-direction:column;gap:24px">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       <div style="display:flex;flex-direction:column;gap:6px">
-        <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">Favor · Flat 3B</div>
+        <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">Favor · {{ houseName }}</div>
         <h1 style="margin:0;font-size:48px">Who's on the hook?</h1>
         <p style="margin:0;color:var(--color-neutral-700)">Pick your account. Your chores are waiting (patiently, for now).</p>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
         <sc-for list="{{ loginUsers }}" as="u" hint-placeholder-count="3">
           <button onClick="{{ u.pick }}" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 8px;background:{{ u.bg }};border:1px solid {{ u.border }};font:inherit;color:inherit">
             <span style="width:48px;height:48px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600;font-size:22px">{{ u.initial }}</span>
@@ -31,8 +31,8 @@
           </button>
         </sc-for>
       </div>
-      <div class="field"><label>Password</label><input class="input" type="password" value="hunter22" readOnly="{{ true }}"></div>
-      <button class="btn btn-primary blueprint" onClick="{{ signIn }}" style="padding:12px;font-size:16px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Sign in as {{ loginName }}</button>
+      <div class="field"><label>Password</label><input class="input" type="password" autocomplete="current-password" value="{{ password }}" onChange="{{ setPassword }}" onKeyDown="{{ loginKey }}"></div>
+      <button class="btn btn-primary blueprint" onClick="{{ signIn }}" disabled="{{ cantSignIn }}" style="padding:12px;font-size:16px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Sign in as {{ loginName }}</button>
     </div>
   </div>
 </sc-if>
@@ -49,13 +49,9 @@
         </sc-for>
       </nav>
       <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
-        <button class="btn btn-ghost" onClick="{{ midnight }}" title="Demo: end the day and apply penalties" style="font-size:13px;display:flex;gap:6px">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>Skip to midnight
-        </button>
-        <div style="width:1px;height:24px;background:var(--color-divider)"></div>
         <span style="width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600">{{ meInitial }}</span>
         <span style="font-weight:500">{{ meName }}</span>
-        <button class="btn btn-secondary" onClick="{{ logout }}" style="font-size:13px">Switch</button>
+        <button class="btn btn-secondary" onClick="{{ openLogout }}" style="font-size:13px;display:flex;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg>Log out</button>
       </div>
     </div>
   </header>
@@ -142,6 +138,7 @@
                       <button class="btn btn-secondary" onClick="{{ x.onClaim }}" style="display:flex;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>I did it, forgot to tick</button>
                     </sc-if>
                     <sc-if value="{{ x.hasStatus }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent">{{ x.statusText }}</span></sc-if>
+                    <sc-if value="{{ x.canDismissDenied }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost" onClick="{{ x.onDismiss }}">Fair enough</button></sc-if>
                   </div>
                 </div>
               </sc-for>
@@ -327,8 +324,8 @@
           <sc-for list="{{ handTargets }}" as="h" hint-placeholder-count="2">
             <div style="display:grid;grid-template-columns:36px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:12px 0;border-top:1px solid var(--color-divider)">
               <span style="width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600;font-size:17px">{{ h.initial }}</span>
-              <div><div style="font-weight:500">{{ h.name }}</div><div style="font-size:12px;color:var(--color-neutral-600)">You hold {{ h.mine }}</div></div>
-              <button class="btn btn-secondary" onClick="{{ h.onAsk }}">Ask nicely</button>
+              <div><div style="font-weight:500">{{ h.name }}</div><div style="font-size:12px;color:var(--color-neutral-600)">{{ h.sub }}</div></div>
+              <button class="btn btn-secondary" onClick="{{ h.onAsk }}" disabled="{{ h.away }}" title="{{ h.askTitle }}">Ask nicely</button>
               <button class="btn btn-primary" onClick="{{ h.onSpend }}" disabled="{{ h.cantSpend }}" title="{{ h.spendTitle }}">Spend {{ handValue }}</button>
             </div>
           </sc-for>
@@ -399,10 +396,22 @@
     </div>
   </sc-if>
 
+</sc-if>
+  <sc-if value="{{ showLogout }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" onClick="{{ closeModal }}" style="z-index:20">
+      <div class="dialog blueprint" onClick="{{ stop }}" style="background:var(--color-bg);width:min(420px,100%)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">Log out</div>
+        <div class="dialog-title" style="font-size:28px">Leaving already, {{ meName }}?</div>
+        <div class="dialog-body">Your tasks will still be here when you log back in. Unfortunately.</div>
+        <div class="dialog-actions"><button class="btn btn-ghost" onClick="{{ closeModal }}">Stay</button><button class="btn btn-primary" onClick="{{ logout }}">Log out</button></div>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:30;background:var(--color-accent-900);color:var(--color-bg);padding:12px 20px;font-size:14px;box-shadow:var(--shadow-lg)">{{ toast }}</div>
   </sc-if>
-</sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;viewAs&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;marta&quot;,&quot;leo&quot;,&quot;ines&quot;],&quot;default&quot;:&quot;marta&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;startTab&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;login&quot;,&quot;today&quot;,&quot;editor&quot;,&quot;favors&quot;,&quot;activity&quot;],&quot;default&quot;:&quot;today&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
@@ -463,7 +472,7 @@ function seed(){
 }
 
 class Component extends DCLogic {
-  state = {...seed(), me:this.props.viewAs??'marta', pick:this.props.viewAs??'marta', screen:this.props.startTab??'today', modal:null, target:null, reason:'', holiday:{}, holidayNote:'', form:null, toast:''};
+  state = {...seed(), me:this.props.viewAs??'marta', pick:this.props.viewAs??'marta', screen:this.props.startTab??'today', modal:null, target:null, reason:'', holiday:{}, holidayNote:'', form:null, toast:'', password:'', backTo:'today', signedOut:false};
 
   componentDidUpdate(pp){
     if(pp.viewAs!==this.props.viewAs&&this.props.viewAs) this.setState({me:this.props.viewAs,pick:this.props.viewAs});
@@ -500,25 +509,6 @@ class Component extends DCLogic {
     const tasks=s.tasks.map(t=>t.mode==='rotate'&&t.assignee===u?{...t,assignee:nextUser(u,away)}:t);
     log=this.addLog(s,{kind:'vote',text:`${NAME[me]} approved ${NAME[u]}'s holiday. Rotating tasks moved on.`,who:ALL});return {holiday:hd,today,tasks,log};});}
   comeBack(){const me=this.state.me;this.setState(s=>{const hd={...(s.holiday||{})};delete hd[me];const today=[...s.today];s.tasks.forEach(t=>{if(t.mode==='fixed'&&t.assignee===me&&t.due===0&&!today.find(i=>i.taskId===t.id))today.push({id:'d'+(uid++),taskId:t.id,assignee:me,status:'open',...(t.freq.type==='weekly'?{daysLeft:7}:{})});});return {holiday:hd,today,log:this.addLog(s,{kind:'done',text:`${NAME[me]} is back from holiday`,who:ALL})};});this.flash('Welcome back. The dishes missed you.');}
-  midnight(){
-    this.setState(s=>{
-      const away=Object.fromEntries(Object.entries(s.holiday||{}).filter(([k,v])=>v.status==='away').map(([k])=>[k,true]));const bal=clone(s.bal);let log=[...s.log];const day=s.day+1;const keep=[];const missed=[...(s.missed||[])];
-      const tasks=s.tasks.map(t=>{
-        const it=s.today.find(i=>i.taskId===t.id);const nt={...t};
-        if(!it){nt.due=Math.max(0,t.due-1);return nt;}
-        if(t.freq.type==='weekly'&&(it.daysLeft||1)>1){keep.push({...it,daysLeft:it.daysLeft-1});return nt;}
-        if(['open','handoff','cantdo'].includes(it.status)){const v=VAL[t.diff];const lost={};others(it.assignee).forEach(o=>{const b=bal[it.assignee][o.id]||0;lost[o.id]=Math.min(b,v);bal[it.assignee][o.id]=Math.max(0,b-v);});missed.unshift({id:'x'+(uid++),taskId:t.id,assignee:it.assignee,day:s.day,lost,status:'missed'});log=[{day:s.day,kind:'miss',text:`${NAME[it.assignee]} missed ${t.name}`,delta:`−${v} with everyone`,who:ALL},...log];}
-        nt.due=t.freq.type==='weekly'?0:period(t.freq)-1;
-        if(t.mode==='rotate')nt.assignee=nextUser(t.assignee,away);
-        return nt;
-      });
-      const today=[...keep];
-      tasks.forEach(t=>{if(t.mode==='rotate'&&away[t.assignee])t.assignee=nextUser(t.assignee,away);if(t.due===0&&!away[t.assignee]&&!today.find(i=>i.taskId===t.id))today.push({id:'d'+(uid++),taskId:t.id,assignee:t.assignee,status:'open',...(t.freq.type==='weekly'?{daysLeft:7}:{})});});
-      return {day,tasks,today,bal,log,missed};
-    });
-    this.flash('Midnight. Missed tasks cost favor; new tasks dealt.');
-  }
-
   openForm(kind,t){
     const f=t?{name:t.name,diff:t.diff,freqType:t.freq.type,n:t.freq.n||3,mode:t.mode,owner:t.assignee}:{name:'',diff:'easy',freqType:'weekly',n:3,mode:'rotate',owner:this.state.me};
     this.setState({modal:'form',form:{kind,taskId:t&&t.id,...f}});
@@ -581,7 +571,7 @@ class Component extends DCLogic {
     Object.entries(s.holiday||{}).forEach(([u,hd])=>{if(hd.status==='requested'&&u!==me)inbox.push({kicker:'Holiday request',title:`${NAME[u]} wants to go on holiday`,sub:`${hd.note?`"${hd.note}" `:''}Approve and their rotating tasks pass along until they're back.`,yesLabel:'Approve',noLabel:'Not now',onYes:()=>this.decideHoliday(u,true),onNo:()=>this.decideHoliday(u,false)});});
     const missed=(s.missed||[]).filter(x=>x.assignee===me).map(x=>{const t=tk(x.taskId);const tot=Object.values(x.lost).reduce((a,b)=>a+b,0);
       return {name:t.name,pips:pips(t.diff).map(p=>({bg:p.bg==='transparent'?'transparent':'var(--color-accent-900)'})),meta:`Missed ${dayName(x.day).toLowerCase()} · cost you ${tot} favor`,
-        isMissed:x.status==='missed',hasStatus:x.status!=='missed',statusText:x.status==='claimed'?'Waiting for a roommate to confirm':'Not confirmed',
+        isMissed:x.status==='missed',hasStatus:x.status!=='missed',canDismissDenied:x.status==='denied',statusText:x.status==='claimed'?'Waiting for a roommate to confirm':'Not confirmed',
         onClaim:()=>this.claimMissed(x),onDismiss:()=>this.dismissMissed(x)};});
     const stLabel=i=>i.status==='done'?'Done':i.status==='excused'?'Excused':i.status==='handoff'?`Asking ${NAME[i.handTo]}`:i.status==='cantdo'?'Wants a pass':'To do';
     const othersRows=s.today.filter(i=>i.assignee!==me).map(i=>{const t=tk(i.taskId);return {name:t.name,who:NAME[i.assignee],diffLabel:`${DL[t.diff]} · ${VAL[t.diff]}`,status:stLabel(i)};});
@@ -609,14 +599,19 @@ class Component extends DCLogic {
       return {name:o.name,initial:o.name[0],mine:s.bal[me][o.id]||0,theirs:s.bal[o.id][me]||0,history:h,noHistory:!h.length};});
     const activity=s.log.map(e=>({day:dayName(e.day),text:e.text,delta:e.delta||'',dot:dayDot(e.kind)}));
     const tgt=s.target&&tk(s.target.taskId);const hv=tgt?VAL[tgt.diff]:0;
-    const handTargets=others(me).map(o=>{const m=s.bal[me][o.id]||0;return {name:o.name,initial:o.name[0],mine:m,cantSpend:m<hv,spendTitle:m<hv?`You need ${hv}, you hold ${m}`:'',onAsk:()=>this.ask(s.target,o.id),onSpend:()=>this.spend(s.target,o.id)};});
+    const handTargets=others(me).map(o=>{const m=s.bal[me][o.id]||0,off=((s.holiday||{})[o.id]||{}).status==='away';return {name:o.name,initial:o.name[0],mine:m,away:off,sub:off?'On holiday':`You hold ${m}`,askTitle:off?`${o.name} is on holiday`:'',cantSpend:off||m<hv,spendTitle:off?`${o.name} is on holiday`:m<hv?`You need ${hv}, you hold ${m}`:'',onAsk:()=>this.ask(s.target,o.id),onSpend:()=>this.spend(s.target,o.id)};});
     const f=s.form||{};
     const optSet=(list,key)=>list.map(([v,label])=>({label,bg:f[key]===v?'var(--color-accent)':'transparent',fg:f[key]===v?'var(--color-bg)':'var(--color-text)',pick:()=>this.setState(st=>({form:{...st.form,[key]:v}}))}));
     return {
       isLogin:s.screen==='login',isApp:s.screen!=='login',
       loginUsers:USERS.map(u=>({name:u.name,initial:u.name[0],bg:s.pick===u.id?'var(--color-accent-100)':'transparent',border:s.pick===u.id?'var(--color-accent)':'var(--color-divider)',pick:()=>this.setState({pick:u.id})})),
-      loginName:NAME[s.pick],signIn:()=>this.setState({me:s.pick,screen:'today'}),logout:()=>this.setState({screen:'login',pick:me}),
-      tabs,meName:NAME[me],meInitial:NAME[me][0],midnight:()=>this.midnight(),
+      houseName:'Flat 3B',loginName:NAME[s.pick],
+      password:s.password,setPassword:e=>this.setState({password:e.target.value}),cantSignIn:!s.password,
+      signIn:()=>{if(s.password)this.setState({me:s.pick,screen:'today',password:'',signedOut:false});},
+      loginKey:e=>{if(e.key==='Enter'&&s.password)this.setState({me:s.pick,screen:'today',password:'',signedOut:false});},
+      openLogout:()=>this.setState({modal:'logout'}),showLogout:s.modal==='logout',
+      logout:()=>this.setState({screen:'login',signedOut:true,pick:me,password:'',modal:null}),
+      tabs,meName:NAME[me],meInitial:NAME[me][0],
       isToday:s.screen==='today',isEditor:s.screen==='editor',isFavors:s.screen==='favors',isActivity:s.screen==='activity',
       dateLabel,todaySub,myTasks,noTasks:!myTasks.length&&((s.holiday||{})[me]||{}).status!=='away',doneCount,totalCount:mine.length,
       progress:mine.map((i,k)=>({bg:k<doneCount?'var(--color-accent)':'transparent'})),

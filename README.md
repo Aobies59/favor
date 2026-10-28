@@ -1,8 +1,8 @@
 # Favor
 
 A chore manager for a shared flat. Roommates trade **favor** by taking on each
-other's tasks. The rules are in [`design/SPEC.md`](design/SPEC.md); the UI is
-the Claude Design export in [`design/Favor.dc.html`](design/Favor.dc.html).
+other's tasks. The UI is the Claude Design export in
+[`design/Favor.dc.html`](design/Favor.dc.html).
 
 Two containers:
 
@@ -77,6 +77,8 @@ cargo run
   two roommates clicking at once can't break a balance.
 - Each action returns the whole household snapshot (`GET /api/state` has the
   same shape). The page also re-polls every 15 s, so other people's changes show up.
-- The rollover follows SPEC.md's "Day rollover" section. A scheduler checks
-  every 30 s and catches up any midnights missed while the server was down.
+- At local midnight the rollover ends the day: unfinished tasks are missed and
+  cost favor, weekly tasks carry over until their 7-day window ends, rotating
+  tasks move to the next person, and the new day's tasks are dealt. A scheduler
+  checks every 30 s and catches up any midnights missed while the server was down.
 - Sessions are HttpOnly cookies. Passwords are hashed with Argon2.
