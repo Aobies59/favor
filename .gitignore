@@ -37,3 +37,5 @@ Cargo.lock
 # Favor: an app, so keep the lockfile (the Docker build uses --locked)
 !Cargo.lock
 .env
+# Local rebuild script
+dev.sh
