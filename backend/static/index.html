@@ -454,6 +454,13 @@
             <sc-if value="{{ isEvery }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:8px;font-size:14px">every <input class="input" type="number" min="2" value="{{ form.n }}" onChange="{{ setN }}" style="width:70px"> days</span></sc-if>
           </div>
         </div>
+        <sc-if value="{{ isWeekly }}" hint-placeholder-val="{{ false }}">
+          <div class="field"><label>Week starts on</label>
+            <div style="display:flex;border:1px solid var(--color-divider);width:fit-content;max-width:100%;overflow-x:auto">
+              <sc-for list="{{ startOpts }}" as="o" hint-placeholder-count="7"><button onClick="{{ o.pick }}" style="cursor:pointer;border:0;border-right:1px solid var(--color-divider);padding:8px 14px;font:inherit;font-size:13px;background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</button></sc-for>
+            </div>
+          </div>
+        </sc-if>
         <div class="field"><label>Assignment</label>
           <div style="display:flex;border:1px solid var(--color-divider);width:fit-content">
             <sc-for list="{{ modeOpts }}" as="o" hint-placeholder-count="2"><button onClick="{{ o.pick }}" style="cursor:pointer;border:0;border-right:1px solid var(--color-divider);padding:8px 14px;font:inherit;font-size:13px;background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</button></sc-for>
@@ -507,7 +514,9 @@ let USERS=[],NAME={},ALL=[];
 const setUsers=list=>{USERS=list;NAME=Object.fromEntries(list.map(u=>[u.id,u.name]));ALL=list.map(u=>u.id);};
 const VAL={easy:1,medium:2,hard:3};
 const DL={easy:'Easy',medium:'Medium',hard:'Hard'};
-const freqLabel=f=>f.type==='daily'?'Daily':f.type==='weekly'?'Weekly':`Every ${f.n} days`;
+const DOW=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],DOW_LONG=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const freqLabel=f=>f.type==='daily'?'Daily':f.type==='weekly'?(f.start!=null?`Weekly · from ${DOW_LONG[f.start]}`:'Weekly'):`Every ${f.n} days`;
+const dowOf=d=>(parseDay(d).getDay()+6)%7;
 const pips=d=>[1,2,3].map(i=>({bg:i<=VAL[d]?'var(--color-accent)':'transparent'}));
 const others=me=>USERS.filter(u=>u.id!==me);
 const initial=n=>(n||'?')[0];
@@ -682,12 +691,13 @@ class Component extends DCLogic {
   comeBack(){this.act('/holiday/back',{},'Welcome back. The dishes missed you.');}
 
   openForm(kind,t){
-    const f=t?{name:t.name,diff:t.diff,freqType:t.freq.type,n:t.freq.n||3,mode:t.mode,owner:t.assignee}:{name:'',diff:'easy',freqType:'weekly',n:3,mode:'rotate',owner:this.state.me};
+    const today=dowOf(this.state.date);
+    const f=t?{name:t.name,diff:t.diff,freqType:t.freq.type,n:t.freq.n||3,start:t.freq.start??today,mode:t.mode,owner:t.assignee}:{name:'',diff:'easy',freqType:'weekly',n:3,start:today,mode:'rotate',owner:this.state.me};
     this.setState({modal:'form',form:{kind,taskId:t&&t.id,...f}});
   }
   async submitForm(){
     const f=this.state.form;
-    const data={name:f.name.trim(),diff:f.diff,freq:f.freqType==='every'?{type:'every',n:Math.max(2,+f.n||2)}:{type:f.freqType},mode:f.mode,owner:f.owner};
+    const data={name:f.name.trim(),diff:f.diff,freq:f.freqType==='every'?{type:'every',n:Math.max(2,+f.n||2)}:f.freqType==='weekly'?{type:'weekly',start:f.start}:{type:f.freqType},mode:f.mode,owner:f.owner};
     if(await this.propose({kind:f.kind,taskId:f.taskId,data}))this.setState({modal:null,form:null});
   }
   propose(p){return this.act('/proposals',p,'Sent to the house for a vote.');}
@@ -749,6 +759,9 @@ class Component extends DCLogic {
     const sel=(s.weekSel||[me]).filter(u=>NAME[u]!=null);const one=sel.length===1?sel[0]:null;
     const wk=Array.from({length:7},()=>[]);
     const rot=t=>t.mode==='rotate';
+    const todayDow=dowOf(s.date);
+    // Length of a weekly window dealt `cur` days from now (ends before the next start day).
+    const winLen=(t,cur)=>t.freq.start==null?7:((t.freq.start-(todayDow+cur)%7+7)%7||7);
     s.tasks.forEach(t=>{const it=s.today.find(i=>i.taskId===t.id);
       let owner=t.assignee;
       if(!it&&rot(t)&&awayMap[owner])owner=nextUser(owner,awayMap);
@@ -756,13 +769,13 @@ class Component extends DCLogic {
       while(cur<7){const who=first?it.assignee:owner;const st=first?it.status:'open';
         // A weekly task shows on every day of its 7-day window until it's done.
         const resolved=st==='done'||st==='excused';
-        const span=t.freq.type!=='weekly'?1:resolved?1:first?Math.max(1,it.daysLeft||7):7;
-        const left0=first?Math.max(1,it.daysLeft||7):7;
+        const left0=first?Math.max(1,it.daysLeft||7):winLen(t,cur);
+        const span=t.freq.type!=='weekly'||resolved?1:left0;
         if(sel.includes(who)&&!(!first&&awayMap[who])){
           for(let k=0;k<span&&cur+k<7;k++){const left=left0-k;
             const note=k===0&&st==='done'?'Done':k===0&&st==='excused'?'Excused':k===0&&st==='handoff'?'Handing off':k===0&&st==='cantdo'?'Asked for a pass':t.freq.type==='weekly'?(left===1?'Due tonight':`${left} days left`):DL[t.diff];
             wk[cur+k].push({uid:who,color:pc(who),ink:pi(who),who:who===me?'You':NAME[who],showWho:!one,name:t.name,pips:pips(t.diff).map(p=>({border:pc(who),bg:p.bg==='transparent'?'transparent':pc(who)})),note,val:VAL[t.diff],repeat:k>0,opacity:resolved?0.55:1,strike:st==='done'?'line-through':'none'});}}
-        cur+=first&&t.freq.type==='weekly'?left0:period(t.freq);
+        cur+=t.freq.type==='weekly'?left0:period(t.freq);
         if(rot(t))owner=nextUser(owner,awayMap);
         first=false;}});
     const ord=[me,...others(me).map(o=>o.id)];wk.forEach(l=>l.sort((x,y)=>ord.indexOf(x.uid)-ord.indexOf(y.uid)));
@@ -830,7 +843,7 @@ class Component extends DCLogic {
       reason:s.reason,setReason:e=>this.setState({reason:e.target.value}),reasonEmpty:!s.reason.trim(),submitCant:()=>this.submitCant(),
       form:f,formKicker:f.kind==='edit'?'Propose an edit':'Propose a task',formTitle:f.kind==='edit'?`Change ${(this.task(f.taskId)||{}).name||''}`:'New task',
       setName:e=>{const v=e.target.value;this.setState(st=>({form:{...st.form,name:v}}));},setN:e=>{const v=e.target.value;this.setState(st=>({form:{...st.form,n:v}}));},
-      isEvery:f.freqType==='every',
+      isEvery:f.freqType==='every',isWeekly:f.freqType==='weekly',startOpts:optSet(DOW.map((l,i)=>[i,l]),'start'),
       diffOpts:optSet([['easy','Easy · 1'],['medium','Medium · 2'],['hard','Hard · 3']],'diff'),
       freqOpts:optSet([['daily','Daily'],['weekly','Weekly'],['every','Every X days']],'freqType'),
       modeOpts:optSet([['rotate','Rotates'],['fixed','Always the same person']],'mode'),

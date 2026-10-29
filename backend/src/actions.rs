@@ -599,7 +599,7 @@ pub async fn apply_if_unanimous(
 
     match (p.kind.as_str(), data, p.task_id) {
         ("add", Some(d), _) => create_task(c, &d, house, day).await?,
-        ("edit", Some(d), Some(task_id)) => update_task(c, task_id, &d).await?,
+        ("edit", Some(d), Some(task_id)) => update_task(c, task_id, &d, house, day).await?,
         ("delete", _, Some(task_id)) => delete_task(c, task_id).await?,
         _ => return Err(anyhow::anyhow!("proposal {id} is malformed").into()),
     }
@@ -650,9 +650,12 @@ pub async fn proposal_titles(c: &mut PgConnection, filter: &str, arg: i32) -> Ap
 /// Creates a task due today and deals its first card right away; it counts
 /// like any other.
 pub async fn create_task(c: &mut PgConnection, d: &TaskData, house: &Household, day: chrono::NaiveDate) -> AppResult<()> {
+    // Every task starts today. A weekly one's first window is the rest of the
+    // current week: it ends the night before the next start day.
+    let start = (d.freq.kind == "weekly").then(|| d.freq.start.unwrap_or(model::weekday(day)));
     let (task_id,): (i32,) = sqlx::query_as(
-        "INSERT INTO tasks (name, difficulty, freq_type, freq_n, mode, assignee_id, due_in_days)
-         VALUES ($1, $2, $3, $4, $5, $6, 0) RETURNING id",
+        "INSERT INTO tasks (name, difficulty, freq_type, freq_n, mode, assignee_id, due_in_days, start_dow)
+         VALUES ($1, $2, $3, $4, $5, $6, 0, $7) RETURNING id",
     )
     .bind(&d.name)
     .bind(&d.diff)
@@ -660,6 +663,7 @@ pub async fn create_task(c: &mut PgConnection, d: &TaskData, house: &Household, 
     .bind(d.freq_n())
     .bind(&d.mode)
     .bind(d.owner)
+    .bind(start)
     .fetch_one(&mut *c)
     .await?;
     let mut t = model::task(c, task_id).await?;
@@ -678,9 +682,19 @@ pub async fn create_task(c: &mut PgConnection, d: &TaskData, house: &Household, 
     Ok(())
 }
 
-pub async fn update_task(c: &mut PgConnection, task_id: i32, d: &TaskData) -> AppResult<()> {
+pub async fn update_task(
+    c: &mut PgConnection,
+    task_id: i32,
+    d: &TaskData,
+    house: &Household,
+    day: chrono::NaiveDate,
+) -> AppResult<()> {
+    let old = model::task(c, task_id).await?;
+    let start = (d.freq.kind == "weekly")
+        .then(|| d.freq.start.or(old.start_dow.filter(|_| old.weekly())).unwrap_or(model::weekday(day)));
     sqlx::query(
-        "UPDATE tasks SET name = $2, difficulty = $3, freq_type = $4, freq_n = $5, mode = $6, assignee_id = $7
+        "UPDATE tasks SET name = $2, difficulty = $3, freq_type = $4, freq_n = $5, mode = $6, assignee_id = $7,
+                          start_dow = $8
          WHERE id = $1",
     )
     .bind(task_id)
@@ -690,8 +704,34 @@ pub async fn update_task(c: &mut PgConnection, task_id: i32, d: &TaskData) -> Ap
     .bind(d.freq_n())
     .bind(&d.mode)
     .bind(d.owner)
-    .execute(c)
+    .bind(start)
+    .execute(&mut *c)
     .await?;
+    let t = model::task(c, task_id).await?;
+    if t.weekly() && (!old.weekly() || old.start_dow != t.start_dow) {
+        reschedule_weekly(c, &t, house, day).await?;
+    }
+    Ok(())
+}
+
+/// Lines a weekly task up with its start day after it changed. This week's
+/// copy (done or not) now ends the night before the next start day; with no
+/// copy out, the rest of the current week is dealt today.
+async fn reschedule_weekly(c: &mut PgConnection, t: &Task, house: &Household, day: chrono::NaiveDate) -> AppResult<()> {
+    let has_instance: Option<(i32,)> =
+        sqlx::query_as("SELECT id FROM instances WHERE task_id = $1").bind(t.id).fetch_optional(&mut *c).await?;
+    if has_instance.is_some() {
+        sqlx::query("UPDATE instances SET days_left = $2 WHERE task_id = $1")
+            .bind(t.id)
+            .bind(t.window_len(day))
+            .execute(&mut *c)
+            .await?;
+        return Ok(());
+    }
+    sqlx::query("UPDATE tasks SET due_in_days = 0 WHERE id = $1").bind(t.id).execute(&mut *c).await?;
+    if !house.away.contains(&t.assignee_id) {
+        model::create_instance(c, t, t.assignee_id, day).await?;
+    }
     Ok(())
 }
 

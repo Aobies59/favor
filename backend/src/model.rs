@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgConnection};
 
@@ -35,6 +35,7 @@ pub struct Task {
     pub mode: String,
     pub assignee_id: i32,
     pub due_in_days: i32,
+    pub start_dow: Option<i32>,
 }
 
 impl Task {
@@ -83,6 +84,9 @@ pub struct Freq {
     pub kind: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub n: Option<i32>,
+    /// Weekly only: the weekday each window starts on (0 = Monday).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start: Option<i32>,
 }
 
 impl TaskData {
@@ -99,8 +103,18 @@ impl TaskData {
             return Err(AppError::bad("Unknown assignment."));
         }
         match self.freq.kind.as_str() {
-            "daily" | "weekly" => self.freq.n = None,
+            "daily" => {
+                self.freq.n = None;
+                self.freq.start = None;
+            }
+            "weekly" => {
+                self.freq.n = None;
+                if self.freq.start.is_some_and(|d| !(0..=6).contains(&d)) {
+                    return Err(AppError::bad("Pick the day the week starts."));
+                }
+            }
             "every" => {
+                self.freq.start = None;
                 let n = self.freq.n.unwrap_or(2);
                 if !(2..=365).contains(&n) {
                     return Err(AppError::bad("Every X days needs X between 2 and 365."));
@@ -122,6 +136,7 @@ impl TaskData {
             freq: Freq {
                 kind: t.freq_type.clone(),
                 n: (t.freq_type == "every").then_some(t.freq_n),
+                start: if t.weekly() { t.start_dow } else { None },
             },
             mode: t.mode.clone(),
             owner: t.assignee_id,
@@ -246,7 +261,7 @@ pub async fn add_balance(c: &mut PgConnection, holder: i32, debtor: i32, delta: 
     Ok(())
 }
 
-const TASK_COLS: &str = "id, name, difficulty, freq_type, freq_n, mode, assignee_id, due_in_days";
+const TASK_COLS: &str = "id, name, difficulty, freq_type, freq_n, mode, assignee_id, due_in_days, start_dow";
 const INSTANCE_COLS: &str = "id, task_id, assignee_id, status, hand_to_id, reason, days_left";
 
 pub async fn tasks(c: &mut PgConnection) -> AppResult<Vec<Task>> {
@@ -286,10 +301,31 @@ pub async fn create_instance(c: &mut PgConnection, t: &Task, assignee: i32, date
     .bind(t.id)
     .bind(date)
     .bind(assignee)
-    .bind(t.weekly().then_some(7))
+    .bind(t.weekly().then(|| t.window_len(date)))
     .execute(c)
     .await?;
     Ok(())
+}
+
+/// Weekday index with Monday = 0, matching `tasks.start_dow`.
+pub fn weekday(day: NaiveDate) -> i32 {
+    day.weekday().num_days_from_monday() as i32
+}
+
+/// Days from `day` until the next `start` weekday (0 when `day` is one).
+pub fn days_until(start: i32, day: NaiveDate) -> i32 {
+    (start - weekday(day)).rem_euclid(7)
+}
+
+impl Task {
+    /// Days a weekly window dealt on `day` lasts: up to the night before the
+    /// next start day, so windows stay lined up with the chosen weekday.
+    pub fn window_len(&self, day: NaiveDate) -> i32 {
+        match self.start_dow.map(|s| days_until(s, day)) {
+            Some(d) if d > 0 => d,
+            _ => 7,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -310,7 +346,7 @@ mod tests {
         TaskData {
             name: "  Dishes ".into(),
             diff: "medium".into(),
-            freq: Freq { kind: freq.into(), n },
+            freq: Freq { kind: freq.into(), n, start: None },
             mode: "rotate".into(),
             owner: 1,
         }
@@ -349,5 +385,45 @@ mod tests {
         let mut bad_owner = data("weekly", None);
         bad_owner.owner = 9;
         assert!(bad_owner.validated(&h).is_err());
+    }
+
+    #[test]
+    fn weekly_windows_line_up_with_the_start_day() {
+        // 2026-10-29 is a Thursday.
+        let thu = NaiveDate::from_ymd_opt(2026, 10, 29).unwrap();
+        assert_eq!(weekday(thu), 3);
+        assert_eq!(days_until(3, thu), 0);
+        assert_eq!(days_until(4, thu), 1); // Friday is tomorrow
+        assert_eq!(days_until(0, thu), 4); // next Monday
+
+        let mut t = Task {
+            id: 1,
+            name: "Bathroom".into(),
+            difficulty: "hard".into(),
+            freq_type: "weekly".into(),
+            freq_n: 1,
+            mode: "fixed".into(),
+            assignee_id: 1,
+            due_in_days: 0,
+            start_dow: Some(3),
+        };
+        assert_eq!(t.window_len(thu), 7); // dealt on its start day: a full week
+        t.start_dow = Some(0);
+        assert_eq!(t.window_len(thu), 4); // Thu–Sun, then Monday's window
+        t.start_dow = None;
+        assert_eq!(t.window_len(thu), 7);
+    }
+
+    #[test]
+    fn start_day_only_kept_for_weekly() {
+        let h = house(&[]);
+        let mut d = data("weekly", None);
+        d.freq.start = Some(4);
+        assert_eq!(d.clone().validated(&h).unwrap().freq.start, Some(4));
+        d.freq.start = Some(7);
+        assert!(d.clone().validated(&h).is_err());
+        let mut daily = data("daily", None);
+        daily.freq.start = Some(2);
+        assert_eq!(daily.validated(&h).unwrap().freq.start, None);
     }
 }

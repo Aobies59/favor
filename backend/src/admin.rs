@@ -361,7 +361,7 @@ pub async fn update_task(
     let dropped = actions::proposal_titles(&mut tx, "p.task_id = $1", id).await?;
     sqlx::query("DELETE FROM proposals WHERE task_id = $1").bind(id).execute(&mut *tx).await?;
     actions::notify_cancelled(&mut tx, &house, &dropped, "The admin changed the task directly.").await?;
-    actions::update_task(&mut tx, id, &d).await?;
+    actions::update_task(&mut tx, id, &d, &house, day).await?;
     let text = if d.name == old.name {
         format!("Admin changed {}", old.name)
     } else {

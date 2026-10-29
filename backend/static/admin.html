@@ -104,6 +104,7 @@
           <div class="inline">
             <select class="input" id="t-freq"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="every">Every X days</option></select>
             <input class="input" id="t-n" type="number" min="2" max="365" value="3" style="width:90px" hidden aria-label="Every how many days">
+            <select class="input" id="t-start" hidden aria-label="Week starts on"><option value="0">from Monday</option><option value="1">from Tuesday</option><option value="2">from Wednesday</option><option value="3">from Thursday</option><option value="4">from Friday</option><option value="5">from Saturday</option><option value="6">from Sunday</option></select>
           </div></div>
         <div class="field"><label for="t-mode">Assignment</label>
           <select class="input" id="t-mode"><option value="rotate">Rotates</option><option value="fixed">Always the same person</option></select></div>
@@ -207,21 +208,26 @@ function render(data) {
 
 // ── Tasks ──
 const DIFF = { easy: 'Easy · 1', medium: 'Medium · 2', hard: 'Hard · 3' };
-const freqLabel = f => f.type === 'daily' ? 'Daily' : f.type === 'weekly' ? 'Weekly' : `Every ${f.n} days`;
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const freqLabel = f => f.type === 'daily' ? 'Daily' : f.type === 'weekly' ? (f.start != null ? `Weekly · from ${DAYS[f.start]}` : 'Weekly') : `Every ${f.n} days`;
+const todayDow = () => (new Date().getDay() + 6) % 7;
 let taskUsers = [];
 let editing = null;
 
 function syncFormBits() {
   $('t-n').hidden = $('t-freq').value !== 'every';
+  $('t-start').hidden = $('t-freq').value !== 'weekly';
   $('t-owner-label').textContent = $('t-mode').value === 'rotate' ? 'Starts with' : 'Responsible';
 }
 $('t-freq').onchange = syncFormBits;
 $('t-mode').onchange = syncFormBits;
+$('t-start').value = todayDow();
 
 function resetTaskForm() {
   editing = null;
   $('task-form').reset();
   $('t-n').value = 3;
+  $('t-start').value = todayDow();
   if (taskUsers.length) $('t-owner').value = taskUsers[0].id;
   $('task-form-title').textContent = 'Add a task';
   $('t-submit').textContent = 'Add task';
@@ -236,6 +242,7 @@ function editTask(t) {
   $('t-diff').value = t.diff;
   $('t-freq').value = t.freq.type;
   $('t-n').value = t.freq.n || 3;
+  $('t-start').value = t.freq.start ?? todayDow();
   $('t-mode').value = t.mode;
   $('t-owner').value = t.owner;
   $('task-form-title').textContent = `Edit ${t.name}`;
@@ -282,7 +289,8 @@ $('task-form').onsubmit = async e => {
   const data = {
     name: $('t-name').value.trim(),
     diff: $('t-diff').value,
-    freq: type === 'every' ? { type, n: Math.max(2, +$('t-n').value || 2) } : { type },
+    freq: type === 'every' ? { type, n: Math.max(2, +$('t-n').value || 2) }
+      : type === 'weekly' ? { type, start: +$('t-start').value } : { type },
     mode: $('t-mode').value,
     owner: +$('t-owner').value,
   };
