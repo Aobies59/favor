@@ -753,11 +753,16 @@ class Component extends DCLogic {
       let owner=t.assignee;
       if(!it&&rot(t)&&awayMap[owner])owner=nextUser(owner,awayMap);
       let cur=it?0:Math.max(t.due,1),first=!!it;
-      while(cur<7){const who=first?it.assignee:owner;
-        if(sel.includes(who)&&!(!first&&awayMap[who])){const st=first?it.status:'open';
-          const note=st==='done'?'Done':st==='excused'?'Excused':st==='handoff'?'Handing off':st==='cantdo'?'Asked for a pass':t.freq.type==='weekly'?(first&&it.daysLeft?`${it.daysLeft} days left`:'Within 7 days'):DL[t.diff];
-          wk[cur].push({uid:who,color:pc(who),ink:pi(who),who:who===me?'You':NAME[who],showWho:!one,name:t.name,pips:pips(t.diff).map(p=>({border:pc(who),bg:p.bg==='transparent'?'transparent':pc(who)})),note,val:VAL[t.diff],opacity:st==='done'||st==='excused'?0.55:1,strike:st==='done'?'line-through':'none'});}
-        cur+=first&&t.freq.type==='weekly'?Math.max(1,it.daysLeft||7):period(t.freq);
+      while(cur<7){const who=first?it.assignee:owner;const st=first?it.status:'open';
+        // A weekly task shows on every day of its 7-day window until it's done.
+        const resolved=st==='done'||st==='excused';
+        const span=t.freq.type!=='weekly'?1:resolved?1:first?Math.max(1,it.daysLeft||7):7;
+        const left0=first?Math.max(1,it.daysLeft||7):7;
+        if(sel.includes(who)&&!(!first&&awayMap[who])){
+          for(let k=0;k<span&&cur+k<7;k++){const left=left0-k;
+            const note=k===0&&st==='done'?'Done':k===0&&st==='excused'?'Excused':k===0&&st==='handoff'?'Handing off':k===0&&st==='cantdo'?'Asked for a pass':t.freq.type==='weekly'?(left===1?'Due tonight':`${left} days left`):DL[t.diff];
+            wk[cur+k].push({uid:who,color:pc(who),ink:pi(who),who:who===me?'You':NAME[who],showWho:!one,name:t.name,pips:pips(t.diff).map(p=>({border:pc(who),bg:p.bg==='transparent'?'transparent':pc(who)})),note,val:VAL[t.diff],repeat:k>0,opacity:resolved?0.55:1,strike:st==='done'?'line-through':'none'});}}
+        cur+=first&&t.freq.type==='weekly'?left0:period(t.freq);
         if(rot(t))owner=nextUser(owner,awayMap);
         first=false;}});
     const ord=[me,...others(me).map(o=>o.id)];wk.forEach(l=>l.sort((x,y)=>ord.indexOf(x.uid)-ord.indexOf(y.uid)));
@@ -765,7 +770,8 @@ class Component extends DCLogic {
       return {kicker:d===0?'Today':d===1?'Tomorrow':dt.toLocaleDateString('en-GB',{weekday:'long'}),date:dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'}),
         kickerColor:d===0?'var(--color-accent)':'var(--color-accent-700)',border:d===0?'var(--color-accent)':'var(--color-divider)',
         tasks,empty:!tasks.length,emptyText:!sel.length?'No one selected':one&&awayMap[one]&&d>0?'On holiday':!one?'Nothing scheduled':one===me?'Nothing for you':`Nothing for ${NAME[one]}`,points:tasks.length?`${tasks.length} task${tasks.length===1?'':'s'} · ${pts} pt${pts===1?'':'s'}`:''};});
-    const weekTotal=wk.reduce((a,l)=>a+l.length,0);
+    // Count each weekly window once, not once per day it shows.
+    const weekTotal=wk.reduce((a,l)=>a+l.filter(t=>!t.repeat).length,0);
     const selNames=sel.map(u=>u===me?'you':NAME[u]);
     const weekSub=one&&awayMap[one]?`${one===me?'You are':NAME[one]+' is'} on holiday, so upcoming tasks skip ${one===me?'you':'them'}.`:`${weekTotal} task${weekTotal===1?'':'s'}${sel.length?' for '+(sel.length===USERS.length?'the whole house':selNames.join(', ').replace(/, ([^,]*)$/,' and $1')):''}. Rotations shown as they stand now; hand-offs and holidays can change them.`;
     const weekTitle=sel.length===USERS.length?'The house, next 7 days':one===me?'Your next 7 days':one?`${NAME[one]}'s next 7 days`:'Next 7 days';
